@@ -1,0 +1,59 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--WolfOS Account Utilities
+
+function generateUID()
+	local sUID = ""
+	local _t = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
+	math.randomseed(os.getComputerID() + os.clock())
+	for nChar = 1, 8 do
+		if math.random(0, 1) == 0 then
+			sUID = sUID .. _t[math.random(1, 10)]
+		else
+			sUID = sUID .. _t[math.random(11, 36)]
+		end
+	end
+	return sUID
+end
+
+function encryptPasscode(sString)
+	return strUtils.SHA1(sString)
+end
+
+function createUser(sUser, sPass)
+	local sUID = generateUID()
+	WDM.fAppend(WDM.getSystemDataDir() .. "users.dat", sUID .. "\\" .. sUser .. "\\" .. encryptPasscode(sPass) .. "\\user")
+	fs.makeDir(WDM.getUsersDir() .. sUID .. "/")
+end
+
+function exists(sUID, sUser)
+	local tUsers = WDM.readToTable(WDM.getSystemDataDir() .. "users.dat")
+	for nUser = 1, #tUsers do
+		local tData = WDM.seperateString(tUsers[nUser], "\\")
+		if sUID == tData[1] or sUser == tData[2] then
+			return true, tData[1], tData[2], tData[3], tData[4], nUser
+		end
+	end
+end
+
+function changeUserData(sUID, sLine, sString)
+	if sLine == "pass" then sString = encryptPasscode(sString) end
+	local bExists, _, sUser, sPass, sType, nUser = exists(sUID)
+	if bExists then
+		local _t = {["user"] = 2, ["pass"] = 3, ["type"] = 4}
+		local tData = {sUID, sUser, sPass, sType}
+		tData[_t[sLine]] = sString
+		WDM.replaceLine(WDM.getSystemDataDir() .. "users.dat", nUser, tData[1] .. "\\" .. tData[2] .. "\\" .. tData[3] .. "\\" .. tData[4])
+	end
+end
+
+function checkLogin(sUser, sPass)
+	local bExists, sUID, _sUser, _sPass, sType = exists(nil, sUser)
+	if bExists then
+		if sUser == _sUser and encryptPasscode(sPass) == _sPass then
+			return true, sUID, sType
+		end
+	end
+	return false
+end

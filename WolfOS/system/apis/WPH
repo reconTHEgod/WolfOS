@@ -1,0 +1,25 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--WolfOS Peripheral Handling
+
+function getValidSides()
+	local _t = {"top", "bottom", "front", "back", "left", "right"}
+	return _t
+end
+
+function getType(sSide)
+	return peripheral.getType(sSide)
+end
+
+function getAllPeripherals()
+	local tSides = {}
+	local tTypes = {}
+	for _, sSide in ipairs(getValidSides()) do
+		if peripheral.isPresent(sSide) then
+			table.insert(tSides, sSide)
+			table.insert(tTypes, getType(sSide))
+		end
+	end
+	return tSides, tTypes
+end

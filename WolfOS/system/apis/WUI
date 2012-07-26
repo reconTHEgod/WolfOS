@@ -1,0 +1,455 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--WolfOS User Interface Library
+
+local bShowClock = false
+local tClearStack = {}
+local tTextFields = {}
+
+local function getAlignment(sText, sAxis, sAlign)
+	local nWidth, nHeight = term.getSize()
+	if sAxis == "x" then
+		if sAlign == "left" then
+			return 1
+		elseif sAlign == "centre" then
+			return math.floor(nWidth / 2) - math.floor(string.len(sText) / 2) + 1
+		elseif sAlign == "right" then
+			return nWidth - string.len(sText) + 1
+		elseif type(sAlign) == "number" then
+			return sAlign
+		end
+	elseif sAxis == "y" then
+		if sAlign == "top" then
+			return 1
+		elseif sAlign == "centre" then
+			return math.floor(nHeight / 2)
+		elseif sAlign == "bottom" then
+			return nHeight
+		elseif type(sAlign) == "number" then
+			return sAlign
+		end
+	end
+	return nil
+end
+
+function fastWrite(sString, xPos, yPos)
+	sString = tostring(sString)
+	local nWidth, nHeight = term.getSize()
+	local a, b = term.getCursorPos()
+	local x = getAlignment(sString, "x", xPos) or a
+	local y = getAlignment(sString, "y", yPos) or b
+	term.setCursorPos(x, y)
+	local tWords = WDM.seperateString(sString, "%s", true)
+	local nWord = 1
+	while nWord <= #tWords do
+		if not tWords[nWord] then break end
+		local x, y = term.getCursorPos()
+		if tWords[nWord] == "\n" then
+			term.setCursorPos(1, y + 1)
+			nWord = nWord + 1
+		else
+			if #tWords[nWord] > nWidth - (x - 1) then
+				term.setCursorPos(1, y + 1)
+				if string.find(nWord, "%s") then
+					_, nWord = WDM.matchFromTable("%s", tWords, nWord + 1)
+				end
+			else
+				term.write(tWords[nWord])
+				nWord = nWord + 1
+			end
+		end
+	end
+end
+
+function slowWrite(sString, xPos, yPos, bSleep)
+	bSleep = bSleep or false
+	sString = tostring(sString)
+	local nWidth, nHeight = term.getSize()
+	local a, b = term.getCursorPos()
+	xPos = getAlignment(sString, "x", xPos) or a
+	yPos = getAlignment(sString, "y", yPos) or b
+	term.setCursorPos(xPos, yPos)
+	local tWords = WDM.seperateString(sString, "%s", true)
+	local nWord = 1
+	repeat
+		if not tWords[nWord] then break end
+		local x, y = term.getCursorPos()
+		if tWords[nWord] == "\n" then
+			term.setCursorPos(1, y + 1)
+			nWord = nWord + 1
+		else
+			if #tWords[nWord] > nWidth - (x - 1) then
+				term.setCursorPos(1, y + 1)
+				if string.find(nWord, "%s") then
+					_, nWord = WDM.matchFromTable("%s", tWords, nWord + 1)
+				end
+			else
+				term.write(tWords[nWord])
+				if not string.find(tWords[nWord], "%s")then sleep(0.01) end
+				nWord = nWord + 1
+			end
+		end
+	until nWord > #tWords
+	if bSleep == true then sleep(1) end
+end
+
+function fastPrint(sString, xPos, yPos)
+	fastWrite(sString .. "\n", xPos, yPos)
+end
+
+function slowPrint(sString, xPos, yPos, bSleep)
+	slowWrite(sString .. "\n", xPos, yPos, bSleep)
+end
+
+function setupClock()
+	local clockFunc = function()
+		local sTime = nil
+		while true do
+			local sNewTime = textutils.formatTime(os.time(), false)
+			if sNewTime ~= sTime then
+				sTime = string.rep(" ", 8 - #sNewTime) .. sNewTime
+				if WUI.checkClock() then
+					local x, y = term.getCursorPos()
+					WUI.fastPrint(sTime, "right", "top")
+					term.setCursorPos(x, y)
+				end
+			end
+			sleep(0.01)
+		end
+	end
+	return clockFunc
+end
+
+function showClock()
+	bShowClock = true
+end
+
+function checkClock()
+	return bShowClock
+end
+
+function hideClock()
+	bShowClock = false
+end
+
+function clear(sProgram)
+	local nWidth = term.getSize()
+	term.clear()
+	if sProgram ~= tClearStack[#tClearStack] then
+		bShowClock = false
+		sleep(0.1)
+		slowWrite(sProgram, "left", "top")
+		slowPrint(textutils.formatTime(os.time(), false), "right")
+		bShowClock = true
+		slowPrint(string.rep("-", nWidth), "left")
+	else
+		fastWrite(sProgram, "left", "top")
+		fastPrint(textutils.formatTime(os.time(), false), "right")
+		fastPrint(string.rep("-", nWidth), "left")
+	end
+	tClearStack = {sProgram}
+	term.setCursorPos(1, 4)
+end
+
+function bootScreen(sLine1, sLine2)
+	bShowClock = false
+	term.clear()
+	slowPrint(sLine1, "centre", "centre")
+	slowPrint(sLine2, "centre")
+	slowWrite("WOLF Technologies", "right", "bottom")
+	sleep(3)
+	term.clear()
+	term.setCursorPos(1, 1)
+end
+
+function logout()
+	clear("Startup Menu")
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		disk.stopAudio(sSide)
+	end
+	slowPrint("Logging out...", nil, nil, true)
+	os.run({}, WDM.getSystemDir() .. "startupMenu")
+end
+
+function shutdown()
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		disk.stopAudio(sSide)
+	end
+	bootScreen("Shutting down WolfOS", "Please wait...")
+	os.shutdown()
+end
+
+function reboot()
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		disk.stopAudio(sSide)
+	end
+	bootScreen("Rebooting WolfOS", "Please wait...")
+	os.reboot()
+end
+
+function menu(tChoices, sMenuTitle, sProgram, bReturn, sEventType, eventFilter)
+	local bReturn = bReturn or false
+	if bReturn == true then
+		if #tChoices > 0 then
+			table.insert(tChoices, "\\")
+		end
+		table.insert(tChoices, "Return")
+	end	
+	local tOptions = {}
+	local n = 1
+	local i = 1
+	repeat
+		if string.sub(tChoices[n], 1, 1) == "@" then
+			if WDM.readSystemTemp("current_type") == "admin" then
+				tChoices[n] = string.sub(tChoices[n], 2)
+			else
+				table.remove(tChoices, n)
+				n = n - 1
+			end
+		elseif string.sub(tChoices[n], 1, 1) == "~" then
+			if WDM.readSystemTemp("current_type") == "user" then
+				tChoices[n] = string.sub(tChoices[n], 2)
+			else
+				table.remove(tChoices, n)
+				n = n - 1
+			end
+		end
+		n = n + 1
+	until n > #tChoices
+	for n = 1, #tChoices do
+		if string.sub(tChoices[n], 1, 1) ~= "\\" then
+			tOptions[i] = tChoices[n]
+			i = i + 1
+		end
+	end
+	local nWidth, nHeight = term.getSize()
+	local nMaxDisplay = nHeight - 5
+	local nScroll = 0
+	local nScrollMax = #tChoices - nMaxDisplay
+	local nSelection = 1
+	local nPosY = 1
+	local bFirst = true
+	while string.sub(tChoices[nPosY + nScroll], 1, 1) == "\\" do
+		nPosY = nPosY + 1
+	end
+	local function redraw()
+		clear(sProgram)
+		if bFirst == true then slowPrint(sMenuTitle) else fastPrint(sMenuTitle) end
+		fastPrint("")
+		for nLine = 1, math.min(nMaxDisplay, #tChoices) do
+			local sLine = "  "
+			if nPosY == nLine then
+				sLine = "> "
+			end
+			if nLine == 1 and nScroll > 0 then
+				sLine = "^"
+			elseif nLine == nMaxDisplay and nScrollMax > 0 then
+				sLine = "v"
+			else
+				if string.sub(tChoices[nLine + nScroll], 1, 1) == "\\" then
+					sLine = sLine .. string.sub(tChoices[nLine + nScroll], 2)
+				else
+					sLine = sLine .. tChoices[nLine + nScroll]
+				end
+			end
+			if bFirst == true then slowWrite(sLine, 1, nLine + 5) else fastWrite(sLine, 1, nLine + 5) end
+		end
+	end
+	while true do
+		redraw()
+		bFirst = false
+		local sEvent = nil
+		repeat
+			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
+		until sEvent == "key" or sEvent == sEventType
+		if sEvent == "key" and p1 == 200 then
+			if tOptions[nSelection - 1] then
+				nSelection = nSelection - 1
+				repeat
+					if nPosY == 2 and nScroll > 0 then
+						nScroll = nScroll - 1
+						nScrollMax = nScrollMax + 1
+					elseif nPosY > 1 then
+						nPosY = nPosY - 1
+					end
+				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
+			end
+		elseif sEvent == "key" and p1 == 208 then
+			if tOptions[nSelection + 1] then
+				nSelection = nSelection + 1
+				repeat
+					if nPosY == nMaxDisplay - 1 and nScrollMax > 0 then
+						nScroll = nScroll + 1
+						nScrollMax = nScrollMax - 1
+					elseif nPosY < nMaxDisplay then
+						nPosY = nPosY + 1
+					end
+				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
+			end
+		elseif sEvent == "key" and p1 == 201 then
+			while tOptions[nSelection - 1] do
+				nSelection = nSelection - 1
+				repeat
+					if nPosY == 2 and nScroll > 0 then
+						nScroll = nScroll - 1
+						nScrollMax = nScrollMax + 1
+					elseif nPosY > 1 then
+						nPosY = nPosY - 1
+					end
+				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
+			end
+		elseif sEvent == "key" and p1 == 209 then
+			while tOptions[nSelection + 1] do
+				nSelection = nSelection + 1
+				repeat
+					if nPosY == nMaxDisplay - 1 and nScrollMax > 0 then
+						nScroll = nScroll + 1
+						nScrollMax = nScrollMax - 1
+					elseif nPosY < nMaxDisplay then
+						nPosY = nPosY + 1
+					end
+				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
+			end
+		elseif sEvent == "key" and p1 == 28 then
+			if nSelection == #tOptions and bReturn == true then
+				return "Return", 0
+			elseif tOptions[nSelection] then
+				return tOptions[nSelection], nSelection
+			end
+		elseif sEvent == "key" and p1 == 14 then
+			if bReturn == true then
+				return "Return", 0
+			end
+		elseif sEvent == sEventType and p1 == eventFilter then
+			return sEvent, p1, p2, p3, p4, p5
+		end
+	end
+end
+
+function choiceMenu(sQuestion)
+	local nWidth, nHeight = term.getSize()
+	if (string.len(sQuestion) + 4) > nWidth then
+		slowPrint(string.sub(sQuestion, 1, nWidth - 8) .. "...? Y|N")
+	else
+		slowPrint(sQuestion .. " Y|N")
+	end
+	repeat
+		sEvent, sChar = os.pullEvent("char")
+	until string.lower(sChar) == "y" or string.lower(sChar) == "n"
+	if string.lower(sChar) == "y" then
+		return true
+	end
+	return false
+end
+
+function registerTextField(nPos, sAllowedPattern, nLength, bHidden)
+	local x, y = term.getCursorPos()
+	local nWidth = term.getSize()
+	local i = 1
+	nPos = nPos or y
+	nLength = nLength or nWidth - 2
+	while true do
+		if tTextFields[i] then
+			if nPos > tTextFields[i][1] then
+				i = i + 1
+			elseif nPos == tTextFields[i][1] then
+				tTextFields[i] = {nPos, sAllowedPattern, nLength, bHidden}
+				break
+			else
+				table.insert(tTextFields, i, {nPos, sAllowedPattern, nLength, bHidden})
+				break
+			end
+		else
+			table.insert(tTextFields, i, {nPos, sAllowedPattern, nLength, bHidden})
+			break
+		end
+	end
+end
+
+function getText(bReturn)
+	local nWidth, nHeight = term.getSize()
+	local tTextOutputs = {}
+	local nActiveField = 1
+	for n = 1, #tTextFields do
+		tTextOutputs[n] = ""
+		slowPrint(">" .. string.rep(" ", nWidth - 1), 1, tTextFields[n][1])
+	end
+	term.setCursorBlink(true)
+	term.setCursorPos(3, tTextFields[1][1])
+	local redraw = function()
+		for n = 1, #tTextFields do
+			fastWrite(string.rep(" ", nWidth), 1, tTextFields[n][1])
+			if tTextFields[n][4] == true then
+				fastPrint("> " .. string.rep("*", #tTextOutputs[n]), 1)
+			else
+				fastPrint("> " .. tTextOutputs[n], 1)
+			end
+		end	
+		if #tTextOutputs[nActiveField] < tTextFields[nActiveField][3] then
+			term.setCursorPos(#tTextOutputs[nActiveField] + 3, tTextFields[nActiveField][1])
+		else
+			term.setCursorPos(#tTextOutputs[nActiveField] + 2, tTextFields[nActiveField][1])
+		end
+	end
+	while true do
+		local sEvent, param = os.pullEvent()
+		if sEvent == "char" then
+			if #tTextOutputs[nActiveField] < tTextFields[nActiveField][3] and string.find(param, tTextFields[nActiveField][2]) and not string.find(param, "£") then
+				tTextOutputs[nActiveField] = tTextOutputs[nActiveField] .. param
+				redraw()
+			end
+		elseif sEvent == "key" then
+			if param == 28 then
+				tTextFields = {}
+				term.setCursorBlink(false)
+				return tTextOutputs
+			elseif param == 199 then
+				if bReturn == true then
+					tTextFields = {}
+					term.setCursorBlink(false)
+					return nil
+				end
+			elseif param == 14 then
+				if #tTextOutputs[nActiveField] > 0 then
+					tTextOutputs[nActiveField] = string.sub(tTextOutputs[nActiveField], 1, #tTextOutputs[nActiveField] - 1)
+					redraw()
+				end
+			elseif param == 15 then
+				if tTextFields[nActiveField + 1] then
+					nActiveField = nActiveField + 1
+					redraw()
+				else
+					nActiveField = 1
+					redraw()
+				end
+			elseif param == 200 then
+				if tTextFields[nActiveField - 1] then
+					nActiveField = nActiveField - 1
+					redraw()
+				end
+			elseif param == 208 then
+				if tTextFields[nActiveField + 1] then
+					nActiveField = nActiveField + 1
+					redraw()
+				end
+			end
+		end
+	end
+end
+
+function correctPass(sProgram, bReturn)
+	slowPrint("Please enter your Passcode: \n")
+	registerTextField(nil, "%w", 16, true)
+	local t = getText(bReturn)
+	if t then
+		local sPass = t[1]
+		if WAU.encryptPasscode(sPass) == WDM.readSystemTemp("current_hash") then
+			return true
+		end
+		clear(sProgram)
+		slowPrint("Incorrect Passcode!", nil, nil, true)
+		return false
+	end
+	return false
+end

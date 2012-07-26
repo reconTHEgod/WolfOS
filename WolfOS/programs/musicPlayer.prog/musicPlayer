@@ -1,0 +1,61 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+local getSide = function()
+	local tChoices = {}
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		if WPH.getType(sSide) == "drive" and disk.hasAudio(sSide) then
+			local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
+			table.insert(tChoices, sSide)
+		end
+	end
+	local sSelection = WUI.menu(tChoices, "Select drive:", "Music Player", true)
+	if sSelection ~= "Return" then
+		return string.lower(sSelection)
+	end
+	return nil
+end
+
+local bMenuLoop = true
+local sPlaying = ""
+local sPlayingSide = ""
+while bMenuLoop == true do
+	local tChoices = {"Play Disk", "Stop Disk", "\\", "Eject Disk"}
+	local tActions = {
+		["Play Disk"] = function()
+			local sDrive = getSide()
+			if sDrive then
+				if disk.hasAudio(sDrive) then
+					sPlaying = disk.getAudioTitle(sDrive)
+					disk.playAudio(sDrive)
+					sPlayingSide = sDrive
+				else
+					sPlaying = ""
+					sPlayingSide = ""
+				end
+			end
+		end,
+		["Stop Disk"] = function()
+			sPlaying = ""
+			sPlayingSide = ""
+			disk.stopAudio()
+		end,
+		["Eject Disk"] = function()
+			local sSide = getSide()
+			if sSide then
+				disk.eject(sSide)
+				if sPlayingSide == sSide then
+					sPlaying = ""
+					sPlayingSide = ""
+				end
+			end
+		end,
+		["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "programMenu") end
+	}
+	local sSelection, p1 = WUI.menu(tChoices, "Now Playing: " .. sPlaying, "Music Player", true, "disk_eject")
+	if sSelection == "disk_eject" then
+		if p1 == sPlayingSide then tActions["Stop Disk"]() end
+	else
+		tActions[sSelection]()
+	end
+end

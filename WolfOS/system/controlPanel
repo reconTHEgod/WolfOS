@@ -1,0 +1,406 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+local editUser = function(sUser)
+	while true do
+		local _, sUID, sUser, _, sType, nPos = WAU.exists(nil, sUser)
+		tChoices = {"\\Unique ID: " .. sUID, "\\User Account ID: " .. sUser, "\\User Account Type: " .. string.upper(string.sub(sType, 1, 1)) .. string.sub(sType, 2), "\\", "Change User Account ID", "Change Passcode", "Change User Account Type", "Delete User Account"}
+		tActions = {
+			["Change User Account ID"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					local sNewUser
+					while true do
+						WUI.slowPrint("Please enter new User Account ID: \n")
+						WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
+						local t = WUI.getText(true)
+						WUI.clear("Control Panel")
+						if t then
+							sNewUser = t[1]
+							if #sNewUser < 1 then
+								WUI.slowPrint("User Account IDs must be between 1 and 16 characters! \n")
+							elseif WAU.exists(nil, sNewUser) then
+								WUI.slowPrint("User Account ID already in use! \n")
+							else
+								WAU.changeUserData(sUID, "user", sNewUser)
+								WUI.clear("Control Panel")
+								WUI.slowPrint("User Account ID changed successfully!", nil, nil, true)
+								break
+							end
+						else
+							break
+						end
+					end
+				end
+			end,
+			["Change Passcode"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					local sNewPass
+					while true do
+						WUI.slowPrint("Please enter new Passcode: \n")
+						WUI.registerTextField(nil, "%w", 16, true)
+						local t = WUI.getText(true)
+						WUI.clear("Control Panel")
+						if t then
+							sNewPass = t[1]
+							if #sNewPass < 8 then
+								WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
+							else
+								WAU.changeUserData(sUID, "pass", sNewPass)
+								WUI.clear("Control Panel")
+								WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
+								break
+							end
+						else
+							break
+						end
+					end
+				end
+			end,
+			["Change User Account Type"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					tChoices = {"Admin", "User"}
+					local sNewType = WUI.menu(tChoices, "User Account Type:", "Control Panel", true)
+					WAU.changeUserData(sUID, "type", string.lower(sNewType))
+					WUI.clear("Control Panel")
+					WUI.slowPrint("User Account type changed successfully!", nil, nil, true)
+				end
+			end,
+			["Delete User Account"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					if WUI.choiceMenu("Delete User Account?") then
+						WDM.removeLine(WDM.getSystemDataDir() .. "users.dat", nPos)
+						fs.delete(WDM.getUsersDir() .. sUID)
+						WUI.clear("Control Panel")
+						WUI.slowPrint("User Account deleted successfully!", nil, nil, true)
+					end
+				end
+			end,
+		}
+		local sSelection = WUI.menu(tChoices, "User Account Settings:", "Control Panel", true)
+		if sSelection == "Return" then
+			break
+		else
+			tActions[sSelection]()
+		end
+	end
+end
+
+local getSide = function(sFilter)
+	local tChoices = {}
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		if WPH.getType(sSide) == sFilter then
+			local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
+			table.insert(tChoices, sSide)
+		end
+	end
+	local sSelection = WUI.menu(tChoices, "Select port:", "Control Panel", true)
+	if sSelection ~= "Return" then
+		return string.lower(sSelection)
+	end
+	return nil
+end
+
+local tChoices = {}
+local tActions = {}
+local bMenuLoop = true
+local nMenuNum = 1
+repeat
+	if nMenuNum == 1 then
+		tChoices = {"System Information", "\\", "User Account Settings", "System Settings"}
+		tActions = {
+			["System Information"] = function()
+				local sMonitorPort = WDM.readSystemData("monitor_port") or ""
+				local sModemPort = WDM.readSystemData("modem_port") or ""
+				local sOffline = WDM.readSystemData("offline")
+				local sMainframeID = WDM.readSystemData("mainframe_id")
+				local sRelayID = WDM.readSystemData("relay_id")
+				if sOffline == "true" then sMainframeID = "OFFLINE" sRelayID = "OFFLINE" end
+				local sSelection = nil
+				repeat
+					tChoices = {
+						"\\WolfOS Version: " .. WDM.readSystemData("version"),
+						"\\",
+						"\\Computer ID#: " .. os.getComputerID(),
+						"\\Monitor Port: " .. string.upper(string.sub(sMonitorPort, 1, 1)) .. string.sub(sMonitorPort, 2),
+						"\\Modem Port: " .. string.upper(string.sub(sModemPort, 1, 1)) .. string.sub(sModemPort, 2),
+						"\\",
+						"\\Mainframe ID#: " .. sMainframeID,
+						"\\Relay ID#: " .. sRelayID,
+						"\\",
+						"\\WolfOS created by 'toxicwolf'",
+						"\\<toxic.wolf@hotmail.co.uk>"
+					}
+					sSelection = WUI.menu(tChoices, "System Information:", "Control Panel", true)
+				until sSelection == "Return"
+			end,
+			["User Account Settings"] = function() nMenuNum = 2 end,
+			["System Settings"] = function() nMenuNum = 3 end,
+			["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "mainMenu") end
+		}
+		local sSelection = WUI.menu(tChoices, "Control Panel:", "Control Panel", true)
+		tActions[sSelection]()
+	elseif nMenuNum == 2 then
+		tChoices = {"~Change User Account ID", "~Change Passcode", "@Edit User Account", "@Create User Account"}
+		tActions = {
+			["Change User Account ID"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					local sNewUser
+					while true do
+						WUI.slowPrint("Please enter new User Account ID: \n")
+						WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
+						local t = WUI.getText(true)
+						WUI.clear("Control Panel")
+						if t then
+							sNewUser = t[1]
+							if #sNewUser < 1 then
+								WUI.slowPrint("User Account IDs must be between 1 and 16 characters! \n")
+							elseif WAU.exists(nil, sNewUser) then
+								WUI.slowPrint("User Account ID already in use! \n")
+							else
+								WAU.changeUserData(WDM.readSystemTemp("current_uid"), "user", sNewUser)
+								WDM.writeSystemTemp(sNewUser, "current_user")
+								WUI.clear("Control Panel")
+								WUI.slowPrint("User Account ID changed successfully!", nil, nil, true)
+								break
+							end
+						else
+							break
+						end
+					end
+				end
+			end,
+			["Change Passcode"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					local sNewPass
+					while true do
+						WUI.slowPrint("Please enter new Passcode: \n")
+						WUI.registerTextField(nil, "%w", 16, true)
+						local t = WUI.getText(true)
+						WUI.clear("Control Panel")
+						if t then
+							sNewPass = t[1]
+							if #sNewPass < 8 then
+								WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
+							else
+								WAU.changeUserData(WDM.readSystemTemp("current_uid"), "pass", sNewPass)
+								WDM.writeSystemTemp(WAU.encryptPasscode(sNewPass), "current_hash")
+								WUI.clear("Control Panel")
+								WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
+								break
+							end
+						else
+							break
+						end
+					end
+				end
+			end,
+			["Edit User Account"] = function()
+				while true do
+					tChoices = {}
+					local tAll = WDM.readToTable(WDM.getSystemDataDir() .. "users.dat")
+					local tAdmins, tUsers = {}, {}
+					for nUser = 1, #tAll do
+						if WDM.seperateString(tAll[nUser], "\\")[4] == "admin" then
+							table.insert(tAdmins, WDM.seperateString(tAll[nUser], "\\")[2])
+						else
+							table.insert(tUsers, WDM.seperateString(tAll[nUser], "\\")[2])
+						end
+					end
+					for n = 1, #tAdmins do
+						table.insert(tChoices, tAdmins[n])
+					end
+					if #tAdmins > 0 and #tUsers > 0 then table.insert(tChoices, "\\") end
+					for n = 1, #tUsers do
+						table.insert(tChoices, tUsers[n])
+					end
+					local sSelection = WUI.menu(tChoices, "User Accounts:", "Control Panel", true)
+					if sSelection == "Return" then 
+						break
+					else
+						editUser(sSelection)
+					end
+				end
+			end,
+			["Create User Account"] = function()
+				local sNewUser, sNewPass
+				WUI.clear("Control Panel")
+				while true do
+					WUI.slowPrint("Please enter new User Account ID: \n")
+					WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
+					WUI.slowPrint("\n \n Please enter new Passcode: \n")
+					WUI.registerTextField(nil, "%w", 16, true)
+					local t = WUI.getText(true)
+					WUI.clear("Control Panel")
+					if t then
+						sNewUser, sNewPass = t[1], t[2]
+						if #sNewUser > 0 and not WAU.exists(nil, sNewUser) and #sNewPass > 7 then
+							WAU.createUser(sNewUser, sNewPass)
+							WUI.clear("Control Panel")
+							WUI.slowPrint("User Account created successfully!", nil, nil, true)
+							break
+						else
+							if #sNewUser < 1 then
+								WUI.slowPrint("User Account IDs must be between 1 and 16 characters!")
+							elseif WAU.exists(nil, sNewUser) then
+								WUI.slowPrint("User Account ID already in use!")
+							end
+							if #sNewPass < 8 then
+								WUI.slowPrint("Passcodes must be between 8 and 16 characters!")
+							end
+							WUI.slowPrint("")
+						end
+					else
+						break
+					end
+				end
+			end,
+			["Return"] = function() nMenuNum = 1 end
+		}
+		local sSelection = WUI.menu(tChoices, "User Account Settings:", "Control Panel", true)
+		tActions[sSelection]()
+	elseif nMenuNum == 3 then
+		tChoices = {"Modem Settings", "Monitor Settings", "\\", "Network Settings", "@\\", "@Update WolfOS", "@Uninstall WolfOS"}
+		tActions = {
+			["Modem Settings"] = function() nMenuNum = 4 end,
+			["Monitor Settings"] = function() nMenuNum = 5 end,
+			["Network Settings"] = function() nMenuNum = 6 end,
+			["Update WolfOS"] = function()
+				local sUrl = "http://pastebin.com/raw.php?i=20pSe6n3"
+				local sLatestVersion = nil
+				WUI.clear("Control Panel")
+				if http then
+					WUI.slowPrint("Checking for updates...", nil, nil, true)
+					http.request(sUrl)
+					while true do
+						local sEvent, _, hSource = os.pullEvent()
+						if sEvent == "http_success" then
+							sLatestVersion = hSource.readAll()
+							break
+						elseif sEvent == "http_failure" then
+							break
+						end
+					end
+					WUI.clear("Control Panel")
+					if sLatestVersion then
+						local convertVersion = function(sVersion)
+							local tParts = WDM.seperateString(string.sub(sVersion, 1, 5), "%.")
+							return tonumber(tParts[1] .. "." .. tParts[2] .. tParts[3])
+						end
+						if convertVersion(sLatestVersion) > convertVersion(WDM.readSystemData("version")) then
+							WUI.slowPrint("WolfOS is outdated!", nil, nil, true)
+						else
+							WUI.slowPrint("WolfOS is up to date!", nil, nil, true)
+						end
+					else
+						WUI.slowPrint("Request timed out!", nil, nil, true)
+					end
+				else
+					WUI.slowPrint("Please enable the 'http' setting in the ComputerCraft config.", nil, nil, true)
+				end
+			end,
+			["Uninstall WolfOS"] = function()
+				WUI.clear("Control Panel")
+				if WUI.correctPass("Control Panel", true) then
+					WUI.clear("Control Panel")
+					if WUI.choiceMenu("Uninstall WolfOS?") then
+						WUI.clear("Control Panel")
+						WUI.slowPrint("Uninstalling WolfOS...", nil, nil, true)
+						fs.delete("/WolfOS")
+						fs.delete("/boot/WolfOS")
+						term.clear()
+						WUI.slowPrint("WolfOS uninstalled successfully!", 1, 1, true)
+						os.reboot()
+					end
+				end
+			end,
+			["Return"] = function() nMenuNum = 1 end
+		}
+		local sSelection = WUI.menu(tChoices, "System Settings", "Control Panel", true)
+		tActions[sSelection]()
+	elseif nMenuNum == 4 then
+		local sModem = "Turn modem on"
+		if WDM.readSystemData("modem_state") == "true" then sModem = "Turn modem off" end
+		tChoices = {"@Change modem port", "@\\", sModem}
+		tActions = {
+			["Change modem port"] = function()
+				local sPort = getSide("modem")
+				if sPort then
+					WDM.writeSystemData(sPort, "modem_port")
+					WUI.clear("Control Panel")
+					WUI.slowPrint("Modem connected at " .. sPort .. " port.", nil, nil, true)
+				end
+			end,
+			[sModem] = function()
+				local sPort = WDM.readSystemData("modem_port")
+				if sPort and WPH.getType(sPort) == "modem" then
+					if rednet.isOpen(sPort) then
+						rednet.close(sPort)
+						WDM.writeSystemData("false", "modem_state")
+						WUI.clear("Control Panel")
+						WUI.slowPrint("Modem turned off at " .. sPort .. " port.", nil, nil, true)
+					else
+						rednet.open(sPort)
+						WDM.writeSystemData("true", "modem_state")
+						WUI.clear("Control Panel")
+						WUI.slowPrint("Modem turned on at " .. sPort .. " port.", nil, nil, true)
+					end
+				else
+					tActions["Change modem port"]()
+				end
+			end,
+			["Return"] = function() nMenuNum = 3 end
+		}
+		local sSelection = WUI.menu(tChoices, "Modem Settings", "Control Panel", true)
+		tActions[sSelection]()
+	elseif nMenuNum == 5 then
+		local sMonitor = "Synchronize with monitor"
+		if WDM.readSystemData("monitor_state") == "true" then sMonitor = "Reset monitor output" end
+		tChoices = {"@Change monitor port", "@\\", sMonitor}
+		tActions = {
+			["Change monitor port"] = function()
+				local sPort = getSide("monitor")
+				if sPort then
+					WDM.writeSystemData(sPort, "monitor_port")
+					WUI.clear("Control Panel")
+					WUI.slowPrint("Monitor port connected at " .. sPort .. " port.", nil, nil, true)
+				end
+			end,
+			["Synchronize with monitor"] = function()
+				local sPort = WDM.readSystemData("monitor_port")
+				if sPort and WPH.getType(sPort) == "monitor" then
+					term.syncScreens(true)
+					term.redirect(peripheral.wrap(sPort))
+					WDM.writeSystemData("true", "monitor_state")
+					WUI.clear("Control Panel")
+					WUI.slowPrint("Synchronized with monitor at " .. sPort .. " port.", nil, nil, true)
+				else
+					tActions["Change monitor port"]()
+				end
+			end,
+			["Reset monitor output"] = function()
+				term.clear()
+				term.setCursorPos(1, 1)
+				term.restore()
+				term.syncScreens(false)
+				WDM.writeSystemData("false", "monitor_state")
+				WUI.clear("Control Panel")
+				WUI.slowPrint("Monitor output reset.", nil, nil, true)
+			end,
+			["Return"] = function() nMenuNum = 3 end
+		}
+		local sSelection = WUI.menu(tChoices, "Monitor Settings", "Control Panel", true)
+		tActions[sSelection]()
+	end
+until bMenuLoop == false
