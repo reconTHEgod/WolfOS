@@ -111,7 +111,7 @@ function setupClock()
 				sTime = string.rep(" ", 8 - #sNewTime) .. sNewTime
 				if WUI.checkClock() then
 					local x, y = term.getCursorPos()
-					WUI.fastPrint(sTime, "right", "top")
+					WUI.fastWrite(sTime, "right", "top")
 					term.setCursorPos(x, y)
 				end
 			end
