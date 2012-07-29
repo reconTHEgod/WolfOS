@@ -192,7 +192,6 @@ end
 function matchFromTable(sString, tTable, nStartPos, bPartial)
 	local nStartPos = nStartPos or 1
 	local bPartial = bPartial or false
-	if type(bPartial) ~= "boolean" then error("boolean expected, got " .. type(bPartial)) end
 	for n = nStartPos, #tTable do
 		local nStart, nEnd = string.find(tTable[n], sString)
 		if nStart == 1 and nEnd == #tTable[n] or bPartial == true and nStart then
