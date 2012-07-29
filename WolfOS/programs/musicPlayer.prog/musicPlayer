@@ -52,9 +52,9 @@ while bMenuLoop == true do
 		end,
 		["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "programMenu") end
 	}
-	local sSelection, p1 = WUI.menu(tChoices, "Now Playing: " .. sPlaying, "Music Player", true, "disk_eject")
+	local sSelection, p1 = WUI.menu(tChoices, "Now Playing: " .. sPlaying, "Music Player", true, {["disk_eject"] = sPlayingSide})
 	if sSelection == "disk_eject" then
-		if p1 == sPlayingSide then tActions["Stop Disk"]() end
+		tActions["Stop Disk"]()
 	else
 		tActions[sSelection]()
 	end

@@ -188,7 +188,7 @@ function reboot()
 	os.reboot()
 end
 
-function menu(tChoices, sMenuTitle, sProgram, bReturn, sEventType, eventFilter)
+function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
 	local bReturn = bReturn or false
 	if bReturn == true then
 		if #tChoices > 0 then
@@ -260,9 +260,7 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, sEventType, eventFilter)
 		redraw()
 		bFirst = false
 		local sEvent = nil
-		repeat
-			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
-		until sEvent == "key" or sEvent == sEventType
+		sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
 		if sEvent == "key" and p1 == 200 then
 			if tOptions[nSelection - 1] then
 				nSelection = nSelection - 1
@@ -321,8 +319,18 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, sEventType, eventFilter)
 			if bReturn == true then
 				return "Return", 0
 			end
-		elseif sEvent == sEventType and p1 == eventFilter then
-			return sEvent, p1, p2, p3, p4, p5
+		elseif tEventFilters and tEventFilters[sEvent] then
+			if type(tEventFilters[sEvent]) == "table" then
+				for _, filter in pairs(tEventFilters[sEvent]) do
+					if p1 == filter then
+						return sEvent, p1, p2, p3, p4, p5
+					end
+				end
+			else
+				if p1 == tEventFilters[sEvent] then
+					return sEvent, p1, p2, p3, p4, p5
+				end
+			end
 		end
 	end
 end
