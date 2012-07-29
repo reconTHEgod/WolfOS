@@ -140,13 +140,13 @@ function clear(sProgram)
 		bShowClock = false
 		sleep(0.1)
 		slowWrite(sProgram, "left", "top")
-		slowPrint(textutils.formatTime(os.time(), false), "right")
+		slowWrite(textutils.formatTime(os.time(), false), "right", "top")
 		bShowClock = true
-		slowPrint(string.rep("-", nWidth), "left")
+		slowWrite(string.rep("-", nWidth), "left", 2)
 	else
 		fastWrite(sProgram, "left", "top")
-		fastPrint(textutils.formatTime(os.time(), false), "right")
-		fastPrint(string.rep("-", nWidth), "left")
+		fastWrite(textutils.formatTime(os.time(), false), "right", "top")
+		fastWrite(string.rep("-", nWidth), "left", 2)
 	end
 	tClearStack = {sProgram}
 	term.setCursorPos(1, 4)
