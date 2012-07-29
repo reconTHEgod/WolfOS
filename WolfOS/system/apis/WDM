@@ -263,3 +263,15 @@ function backOneDir(sPath)
 	end
 	return sNewPath
 end
+
+function scaleBytes(nRawBytes)
+	if nRawBytes == "unlimited" then
+		return "Unlimited"
+	elseif nRawBytes < 1000 then
+		return tostring(nRawBytes) .. " B"
+	elseif nRawBytes >= 1000 and nRawBytes < 1000000 then
+		return string.sub(tostring(nRawBytes / 1000), 1, string.find(tostring(nRawBytes / 1000), "%.") + 1) .. " KB"
+	elseif nRawBytes >= 1000000 then
+		return string.sub(tostring(nRawBytes / 1000000), 1, string.find(tostring(nRawBytes / 1000000), "%.") + 1) .. " MB"
+	end
+end

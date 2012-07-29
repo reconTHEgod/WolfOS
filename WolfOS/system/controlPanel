@@ -128,6 +128,7 @@ repeat
 					tChoices = {
 						"\\WolfOS Version: " .. WDM.readSystemData("version"),
 						"\\",
+						"\\Hard Drive Space: " .. WDM.scaleBytes(fs.getFreeSpace("/")),
 						"\\Computer ID#: " .. os.getComputerID(),
 						"\\Monitor Port: " .. string.upper(string.sub(sMonitorPort, 1, 1)) .. string.sub(sMonitorPort, 2),
 						"\\Modem Port: " .. string.upper(string.sub(sModemPort, 1, 1)) .. string.sub(sModemPort, 2),

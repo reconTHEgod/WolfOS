@@ -2,27 +2,31 @@
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
 local getSide = function(sTitle)
-	local tChoices = {}
-	for _, sSide in ipairs(WPH.getValidSides()) do
-		if WPH.getType(sSide) == "drive" and disk.hasData(sSide) then
-			local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
-			table.insert(tChoices, sSide)
+	while true do
+		local tChoices = {}
+		for _, sSide in ipairs(WPH.getValidSides()) do
+			if WPH.getType(sSide) == "drive" and disk.hasData(sSide) then
+				local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
+				table.insert(tChoices, sSide)
+			end
 		end
-	end
-	local sSelection = WUI.menu(tChoices, sTitle, "Disk Manager", true)
-	if sSelection ~= "Return" then
-		return string.lower(sSelection)
+		local sSelection = WUI.menu(tChoices, sTitle, "Disk Manager", true, {["disk"] = WPH.getValidSides(), ["disk_eject"] = WPH.getValidSides()})
+		if sSelection == "Return" then
+			break
+		elseif sSelection ~= "disk" and sSelection ~= "disk_eject" then
+			return string.lower(sSelection)
+		end
 	end
 	return nil
 end
 
 local bMenuLoop = true
 while bMenuLoop == true do
-	local tChoices = {"Set Label", "\\", "Clone Disk", "Format Disk"}
-	local tActions = {
-		["Set Label"] = function()
-			local sSide = getSide("Select drive:")
-			if sSide then
+	local sSide = getSide("Select drive:")
+	if sSide then
+		local tChoices = {"\\Drive: " .. string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2), "\\Disk ID#: " .. disk.getDiskID(sSide), "\\Disk Space: " .. WDM.scaleBytes(fs.getFreeSpace(disk.getMountPath(sSide))), "\\Disk Label: " .. disk.getLabel(sSide), "\\", "Set Label", "Clone Disk", "Format Disk"}
+		local tActions = {
+			["Set Label"] = function()
 				WUI.clear("Disk Manager")
 				WUI.slowPrint("Enter new disk label: \n")
 				WUI.registerTextField(nil, ".")
@@ -32,51 +36,52 @@ while bMenuLoop == true do
 					disk.setLabel(sSide, sNewLabel)
 					WUI.clear("Disk Manager")
 					if sNewLabel == "" then
-						WUI.slowPrint("Label removed from disk in " .. sSide .. " drive.", nil, nil, true)
+						WUI.slowPrint("Label removed from disk.", nil, nil, true)
 					else
-						WUI.slowPrint("Label set to '" .. sNewLabel .. "' on disk in " .. sSide .. " drive.", nil, nil, true)
+						WUI.slowPrint("Label on disk set to '" .. sNewLabel .. "'.", nil, nil, true)
 					end
 				end
-			end
-		end,
-		["Clone Disk"] = function()
-			local sSourceSide = getSide("Select source drive:")
-			local sDestSide = nil
-			repeat
-				sDestSide = getSide("Select destination drive:")
-			until sDestSide ~= sSourceSide
-			if sSourceSide and sDestSide then
-				local sSourceMountPath = disk.getMountPath(sSourceSide)
-				local sDestMountPath = disk.getMountPath(sDestSide)
-				local t = fs.list(sDestMountPath)
-				for n = 1, #t do
-					fs.delete(sDestMountPath .. "/" .. t[n])
+			end,
+			["Clone Disk"] = function()
+				local sDestSide = nil
+				repeat
+					sDestSide = getSide("Select destination drive:")
+				until sDestSide ~= sSide
+				if sDestSide then
+					local sSourceMountPath = disk.getMountPath(sSide)
+					local sDestMountPath = disk.getMountPath(sDestSide)
+					local t = fs.list(sDestMountPath)
+					for n = 1, #t do
+						fs.delete(sDestMountPath .. "/" .. t[n])
+					end
+					t = fs.list(sSourceMountPath)
+					for n = 1, #t do
+						fs.copy(sSourceMountPath .. "/" .. t[n], sDestMountPath .. "/" .. t[n])
+					end
+					local sLabel = disk.getLabel(sSide) or ""
+					disk.setLabel(sDestSide, sLabel)
+					WUI.clear("Disk Manager")
+					WUI.slowPrint("Data on disk cloned to disk in " .. sDestSide .. " drive.", nil, nil, true)
 				end
-				t = fs.list(sSourceMountPath)
-				for n = 1, #t do
-					fs.copy(sSourceMountPath .. "/" .. t[n], sDestMountPath .. "/" .. t[n])
+			end,
+			["Format Disk"] = function()
+				if WUI.choiceMenu("Format disk?") then
+					local sMountPath = disk.getMountPath(sSide)
+					local t = fs.list(sMountPath)
+					for n = 1, #t do
+						fs.delete(sMountPath .. "/" .. t[n])
+					end
+					disk.setLabel(sSide, "")
+					WUI.clear("Disk Manager")
+					WUI.slowPrint("Disk formatted.")
 				end
-				local sLabel = disk.getLabel(sSourceSide) or ""
-				disk.setLabel(sDestSide, sLabel)
-				WUI.clear("Disk Manager")
-				WUI.slowPrint("Disk in " .. sSourceSide .. " drive cloned to disk in " .. sDestSide .. " drive.", nil, nil, true)
-			end
-		end,
-		["Format Disk"] = function()
-			local sSide = getSide("Select drive:")
-			if sSide then
-				local sMountPath = disk.getMountPath(sSide)
-				local t = fs.list(sMountPath)
-				for n = 1, #t do
-					fs.delete(sMountPath .. "/" .. t[n])
-				end
-				disk.setLabel(sSide, "")
-				WUI.clear("Disk Manager")
-				WUI.slowPrint("Format complete on disk in " .. sSide .. " drive.")
-			end
-		end,
-		["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "utilityMenu") end
-	}
-	local sSelection = WUI.menu(tChoices, "Disk Manager", "Disk Manager", true)
-	tActions[sSelection]()
+			end,
+			["Return"] = function() end,
+			["disk_eject"] = function() end
+		}
+		local sSelection = WUI.menu(tChoices, "Disk Manager", "Disk Manager", true, {["disk_eject"] = sSide})
+		tActions[sSelection]()
+	else
+		bMenuLoop = false os.run({}, WDM.getSystemDir() .. "utilityMenu")
+	end
 end
