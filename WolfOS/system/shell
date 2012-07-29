@@ -1,7 +1,9 @@
 --[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
-os.setComputerLabel("ID# " .. os.getComputerID())
+if not os.getComputerLabel() then
+	os.setComputerLabel("ID# " .. os.getComputerID())
+end
 print("Loading APIs...")
 sleep(0.01)
 local tAPIS = fs.list("/WolfOS/system/apis")
