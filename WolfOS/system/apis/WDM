@@ -3,6 +3,16 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Data Management Library
 
+local _sIteratorDir, _sIteratorItem = "", ""
+
+function sIteratorDir()
+	return _sIteratorDir
+end
+
+function sIteratorItem()
+	return _sIteratorItem
+end
+
 function exists(sPath)
 	local hFile = io.open(sPath, "r")
 	if hFile then
@@ -264,16 +274,26 @@ function backOneDir(sPath)
 end
 
 function iterateThroughDir(sIteratorDir, fFiles, fDirs)
-	for _, sIteratorItem in ipairs(fs.list(sIteratorDir)) do
-		_sIteratorDir = sIteratorDir
-		_sIteratorItem = sIteratorItem
-		if fs.isDir(sIteratorDir .. sIteratorItem) then
-			iterateThroughDir(sIteratorDir .. sIteratorItem .. "/", fDirs, fFiles)
+	local nDepth = 0
+	_sIteratorDir = sIteratorDir
+	local function iterate()
+		nDepth = nDepth + 1
+		local tDirs, tFiles = list(_sIteratorDir)
+		for _, sIteratorItem in ipairs(tDirs) do
+			_sIteratorDir = sIteratorDir .. sIteratorItem .. "/"
+			iterate()
+			nDepth = nDepth - 1
+			local _t = seperateString(_sIteratorDir, "/")
+			_sIteratorDir = table.concat(_t, "/", 1, nDepth) .. "/"
+			_sIteratorItem = _t[#_t]
 			if fDirs then fDirs() end
-		else
-			fFiles()
+		end
+		for _, sIteratorItem in ipairs(tFiles) do
+			_sIteratorItem = sIteratorItem
+			if fFiles then fFiles() end
 		end
 	end
+	iterate()
 end
 
 function scaleBytes(nRawBytes)
