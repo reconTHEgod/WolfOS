@@ -265,12 +265,7 @@ end
 function backOneDir(sPath)
 	local sPath = "/" .. sPath
 	local tParts = seperateString(sPath, "/")
-	table.remove(tParts, #tParts)
-	local sNewPath = "/"
-	for n = 1, #tParts do
-		sNewPath = sNewPath .. tParts[n] .. "/"
-	end
-	return sNewPath
+	return "/" .. table.concat(tParts, "/", 1, #tParts - 1) .. "/"
 end
 
 function iterateThroughDir(sIteratorDir, fFiles, fDirs)
