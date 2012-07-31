@@ -263,13 +263,13 @@ function backOneDir(sPath)
 	return sNewPath
 end
 
-function iterateThroughDir(sIteratorDir, fDirs, fFiles)
+function iterateThroughDir(sIteratorDir, fFiles, fDirs)
 	for _, sIteratorItem in ipairs(fs.list(sIteratorDir)) do
 		_sIteratorDir = sIteratorDir
 		_sIteratorItem = sIteratorItem
 		if fs.isDir(sIteratorDir .. sIteratorItem) then
 			iterateThroughDir(sIteratorDir .. sIteratorItem .. "/", fDirs, fFiles)
-			fDirs()
+			if fDirs then fDirs() end
 		else
 			fFiles()
 		end
