@@ -65,15 +65,13 @@ while bMenuLoop == true do
 				end
 			end,
 			["Format Disk"] = function()
+				WUI.clear("Disk Manager")
 				if WUI.choiceMenu("Format disk?") then
-					local sMountPath = disk.getMountPath(sSide)
-					local t = fs.list(sMountPath)
-					for n = 1, #t do
-						fs.delete(sMountPath .. "/" .. t[n])
-					end
+					local delete = function() fs.delete(WDM.sIteratorDir() .. WDM.sIteratorItem()) end
+					WDM.iterateThroughDir(disk.getMountPath(sSide) .. "/", delete, delete)
 					disk.setLabel(sSide, "")
 					WUI.clear("Disk Manager")
-					WUI.slowPrint("Disk formatted.")
+					WUI.slowPrint("Disk formatted.", nil, nil, true)
 				end
 			end,
 			["Return"] = function() end,
