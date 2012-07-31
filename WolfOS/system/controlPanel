@@ -4,91 +4,95 @@ Please ask for permission before attempting to redistribute any code relating to
 local editUser = function(sUser)
 	while true do
 		local _, sUID, sUser, _, sType, nPos = WAU.exists(nil, sUser)
-		tChoices = {"\\Unique ID: " .. sUID, "\\User Account ID: " .. sUser, "\\User Account Type: " .. string.upper(string.sub(sType, 1, 1)) .. string.sub(sType, 2), "\\", "Change User Account ID", "Change Passcode", "Change User Account Type", "Delete User Account"}
-		tActions = {
-			["Change User Account ID"] = function()
-				WUI.clear("Control Panel")
-				if WUI.correctPass("Control Panel", true) then
+		if sUID then
+			tChoices = {"\\Unique ID: " .. sUID, "\\User Account ID: " .. sUser, "\\User Account Type: " .. string.upper(string.sub(sType, 1, 1)) .. string.sub(sType, 2), "\\", "Change User Account ID", "Change Passcode", "Change User Account Type", "Delete User Account"}
+			tActions = {
+				["Change User Account ID"] = function()
 					WUI.clear("Control Panel")
-					local sNewUser
-					while true do
-						WUI.slowPrint("Please enter new User Account ID: \n")
-						WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
-						local t = WUI.getText(true)
+					if WUI.correctPass("Control Panel", true) then
 						WUI.clear("Control Panel")
-						if t then
-							sNewUser = t[1]
-							if #sNewUser < 1 then
-								WUI.slowPrint("User Account IDs must be between 1 and 16 characters! \n")
-							elseif WAU.exists(nil, sNewUser) then
-								WUI.slowPrint("User Account ID already in use! \n")
+						local sNewUser
+						while true do
+							WUI.slowPrint("Please enter new User Account ID: \n")
+							WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
+							local t = WUI.getText(true)
+							WUI.clear("Control Panel")
+							if t then
+								sNewUser = t[1]
+								if #sNewUser < 1 then
+									WUI.slowPrint("User Account IDs must be between 1 and 16 characters! \n")
+								elseif WAU.exists(nil, sNewUser) then
+									WUI.slowPrint("User Account ID already in use! \n")
+								else
+									WAU.changeUserData(sUID, "user", sNewUser)
+									WUI.clear("Control Panel")
+									WUI.slowPrint("User Account ID changed successfully!", nil, nil, true)
+									break
+								end
 							else
-								WAU.changeUserData(sUID, "user", sNewUser)
-								WUI.clear("Control Panel")
-								WUI.slowPrint("User Account ID changed successfully!", nil, nil, true)
 								break
 							end
-						else
-							break
 						end
 					end
-				end
-			end,
-			["Change Passcode"] = function()
-				WUI.clear("Control Panel")
-				if WUI.correctPass("Control Panel", true) then
+				end,
+				["Change Passcode"] = function()
 					WUI.clear("Control Panel")
-					local sNewPass
-					while true do
-						WUI.slowPrint("Please enter new Passcode: \n")
-						WUI.registerTextField(nil, "%w", 16, true)
-						local t = WUI.getText(true)
+					if WUI.correctPass("Control Panel", true) then
 						WUI.clear("Control Panel")
-						if t then
-							sNewPass = t[1]
-							if #sNewPass < 8 then
-								WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
+						local sNewPass
+						while true do
+							WUI.slowPrint("Please enter new Passcode: \n")
+							WUI.registerTextField(nil, "%w", 16, true)
+							local t = WUI.getText(true)
+							WUI.clear("Control Panel")
+							if t then
+								sNewPass = t[1]
+								if #sNewPass < 8 then
+									WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
+								else
+									WAU.changeUserData(sUID, "pass", sNewPass)
+									WUI.clear("Control Panel")
+									WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
+									break
+								end
 							else
-								WAU.changeUserData(sUID, "pass", sNewPass)
-								WUI.clear("Control Panel")
-								WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
 								break
 							end
-						else
-							break
 						end
 					end
-				end
-			end,
-			["Change User Account Type"] = function()
-				WUI.clear("Control Panel")
-				if WUI.correctPass("Control Panel", true) then
+				end,
+				["Change User Account Type"] = function()
 					WUI.clear("Control Panel")
-					tChoices = {"Admin", "User"}
-					local sNewType = WUI.menu(tChoices, "User Account Type:", "Control Panel", true)
-					WAU.changeUserData(sUID, "type", string.lower(sNewType))
-					WUI.clear("Control Panel")
-					WUI.slowPrint("User Account type changed successfully!", nil, nil, true)
-				end
-			end,
-			["Delete User Account"] = function()
-				WUI.clear("Control Panel")
-				if WUI.correctPass("Control Panel", true) then
-					WUI.clear("Control Panel")
-					if WUI.choiceMenu("Delete User Account?") then
-						WDM.removeLine(WDM.getSystemDataDir() .. "users.dat", nPos)
-						fs.delete(WDM.getUsersDir() .. sUID)
+					if WUI.correctPass("Control Panel", true) then
 						WUI.clear("Control Panel")
-						WUI.slowPrint("User Account deleted successfully!", nil, nil, true)
+						tChoices = {"Admin", "User"}
+						local sNewType = WUI.menu(tChoices, "User Account Type:", "Control Panel", true)
+						WAU.changeUserData(sUID, "type", string.lower(sNewType))
+						WUI.clear("Control Panel")
+						WUI.slowPrint("User Account type changed successfully!", nil, nil, true)
 					end
-				end
-			end,
-		}
-		local sSelection = WUI.menu(tChoices, "User Account Settings:", "Control Panel", true)
-		if sSelection == "Return" then
-			break
+				end,
+				["Delete User Account"] = function()
+					WUI.clear("Control Panel")
+					if WUI.correctPass("Control Panel", true) then
+						WUI.clear("Control Panel")
+						if WUI.choiceMenu("Delete User Account?") then
+							WDM.removeLine(WDM.getSystemDataDir() .. "users.dat", nPos)
+							fs.delete(WDM.getUsersDir() .. sUID)
+							WUI.clear("Control Panel")
+							WUI.slowPrint("User Account deleted successfully!", nil, nil, true)
+						end
+					end
+				end,
+			}
+			local sSelection = WUI.menu(tChoices, "User Account Settings:", "Control Panel", true)
+			if sSelection == "Return" then
+				break
+			else
+				tActions[sSelection]()
+			end
 		else
-			tActions[sSelection]()
+			break
 		end
 	end
 end
