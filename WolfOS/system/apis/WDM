@@ -263,6 +263,17 @@ function backOneDir(sPath)
 	return sNewPath
 end
 
+function iterateThroughDir(sDir, fDirs, fFiles)
+	for _, sItem in ipairs(fs.list(sDir)) do
+		if fs.isDir(sDir .. sItem) then
+			encryptDir(sDir .. sItem .. "/", fDirs, fFiles)
+			fDirs()
+		else
+			fFiles()
+		end
+	end
+end
+
 function scaleBytes(nRawBytes)
 	if nRawBytes == "unlimited" then
 		return "Unlimited"
