@@ -24,7 +24,7 @@ local bMenuLoop = true
 while bMenuLoop == true do
 	local sSide = getSide("Select drive:")
 	if sSide then
-		local tChoices = {"\\Drive: " .. string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2), "\\Disk ID#: " .. disk.getDiskID(sSide), "\\Disk Space: " .. WDM.scaleBytes(fs.getFreeSpace(disk.getMountPath(sSide))), "\\Disk Label: " .. disk.getLabel(sSide), "\\", "Set Label", "Clone Disk", "Format Disk"}
+		local tChoices = {"\\Drive: " .. string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2), "\\Disk ID#: " .. disk.getDiskID(sSide), "\\Disk Space: " .. WDM.scaleBytes(fs.getFreeSpace(disk.getMountPath(sSide))), "\\Disk Label: " .. (disk.getLabel(sSide) or ""), "\\", "Set Label", "Clone Disk", "Format Disk"}
 		local tActions = {
 			["Set Label"] = function()
 				WUI.clear("Disk Manager")
