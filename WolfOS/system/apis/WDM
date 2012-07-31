@@ -269,8 +269,10 @@ function scaleBytes(nRawBytes)
 	elseif nRawBytes < 1000 then
 		return tostring(nRawBytes) .. " B"
 	elseif nRawBytes >= 1000 and nRawBytes < 1000000 then
-		return string.sub(tostring(nRawBytes / 1000), 1, string.find(tostring(nRawBytes / 1000), "%.") + 1) .. " KB"
+		local nDecimalPoint = string.find(tostring(nRawBytes / 1000), "%.") or #tostring(nRawBytes)
+		return string.sub(tostring(nRawBytes / 1000), 1, nDecimalPoint + 1) .. " KB"
 	elseif nRawBytes >= 1000000 then
-		return string.sub(tostring(nRawBytes / 1000000), 1, string.find(tostring(nRawBytes / 1000000), "%.") + 1) .. " MB"
+		local nDecimalPoint = string.find(tostring(nRawBytes / 1000000), "%.") or #tostring(nRawBytes)
+		return string.sub(tostring(nRawBytes / 1000000), 1, nDecimalPoint + 1) .. " MB"
 	end
 end
