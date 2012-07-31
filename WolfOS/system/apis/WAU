@@ -17,9 +17,7 @@ function generateUID()
 	return sUID
 end
 
-function encryptPasscode(sString)
-	return hash.sha256(sString)
-end
+encryptPasscode = hash.sha256
 
 function createUser(sUser, sPass)
 	local sUID = generateUID()
