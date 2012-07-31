@@ -24,93 +24,99 @@ local bMenuLoop = true
 while bMenuLoop == true do
 	local sSide = getSide("Select drive:")
 	if sSide then
-		local tChoices = {"\\Drive: " .. string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2), "\\Disk ID#: " .. disk.getDiskID(sSide), "\\Disk Space: " .. WDM.scaleBytes(fs.getFreeSpace(disk.getMountPath(sSide))), "\\Disk Label: " .. (disk.getLabel(sSide) or ""), "\\", "Set Label", "Clone Disk", "Format Disk"}
-		local tActions = {
-			["Set Label"] = function()
-				WUI.clear("Disk Manager")
-				WUI.slowPrint("Enter new disk label: \n")
-				WUI.registerTextField(nil, ".")
-				local t = WUI.getText(true)
-				if t then
-					local sNewLabel = t[1]
-					disk.setLabel(sSide, sNewLabel)
+		while true do
+			local sEncrypt = "Encrypt Disk"
+			if WDM.isDiskEncrypted(sSide) then sEncrypt = "Remove Encryption" end
+			local tChoices = {"\\Drive: " .. string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2), "\\Disk ID#: " .. disk.getDiskID(sSide), "\\Disk Space: " .. WDM.scaleBytes(fs.getFreeSpace(disk.getMountPath(sSide))), "\\Disk Label: " .. (disk.getLabel(sSide) or ""), "\\", "Set Label", "Clone Disk", "Format Disk", sEncrypt}
+			local tActions = {
+				["Set Label"] = function()
 					WUI.clear("Disk Manager")
-					if sNewLabel == "" then
-						WUI.slowPrint("Label removed from disk.", nil, nil, true)
-					else
-						WUI.slowPrint("Label on disk set to '" .. sNewLabel .. "'.", nil, nil, true)
-					end
-				end
-			end,
-			["Clone Disk"] = function()
-				local sDestSide = nil
-				repeat
-					sDestSide = getSide("Select destination drive:")
-				until sDestSide ~= sSide
-				if sDestSide then
-					local sSourceMountPath = disk.getMountPath(sSide)
-					local sDestMountPath = disk.getMountPath(sDestSide)
-					local t = fs.list(sDestMountPath)
-					for n = 1, #t do
-						fs.delete(sDestMountPath .. "/" .. t[n])
-					end
-					t = fs.list(sSourceMountPath)
-					for n = 1, #t do
-						fs.copy(sSourceMountPath .. "/" .. t[n], sDestMountPath .. "/" .. t[n])
-					end
-					local sLabel = disk.getLabel(sSide) or ""
-					disk.setLabel(sDestSide, sLabel)
-					WUI.clear("Disk Manager")
-					WUI.slowPrint("Data on disk cloned to disk in " .. sDestSide .. " drive.", nil, nil, true)
-				end
-			end,
-			["Format Disk"] = function()
-				WUI.clear("Disk Manager")
-				if WUI.choiceMenu("Format disk?") then
-					local delete = function() fs.delete(WDM.sIteratorDir() .. WDM.sIteratorItem()) end
-					WDM.iterateThroughDir(disk.getMountPath(sSide) .. "/", delete, delete)
-					disk.setLabel(sSide, "")
-					WUI.clear("Disk Manager")
-					WUI.slowPrint("Disk formatted.", nil, nil, true)
-				end
-			end,
-			["Encrypt Disk"] = function()
-				WUI.clear("Disk Manager")
-				while true do
-					WUI.slowPrint("Enter new encryption key: \n")
-					WUI.registerTextField(nil, "%w", 16, true)
+					WUI.slowPrint("Enter new disk label: \n")
+					WUI.registerTextField(nil, ".")
 					local t = WUI.getText(true)
 					if t then
-						local sNewKey = t[1]
-						if #sNewKey < 8 then
-							WUI.slowPrint("Encryption keys must be between 8 and 16 characters! \n")
-                        else
-							WDM.encryptDir(disk.getMountPath(sSide) .. "/", sNewKey)
-							WDM.fWrite(disk.getMountPath(sSide) .. "/.encrypt", encryption.encrypt(sNewKey, sNewKey))
-                            WUI.clear("Disk Manager")
-							WUI.slowPrint("Disk encrypted.", nil, nil, true)
+						local sNewLabel = t[1]
+						disk.setLabel(sSide, sNewLabel)
+						WUI.clear("Disk Manager")
+						if sNewLabel == "" then
+							WUI.slowPrint("Label removed from disk.", nil, nil, true)
+						else
+							WUI.slowPrint("Label on disk set to '" .. sNewLabel .. "'.", nil, nil, true)
+						end
+					end
+				end,
+				["Clone Disk"] = function()
+					local sDestSide = nil
+					repeat
+						sDestSide = getSide("Select destination drive:")
+					until sDestSide ~= sSide
+					if sDestSide then
+						local sSourceMountPath = disk.getMountPath(sSide)
+						local sDestMountPath = disk.getMountPath(sDestSide)
+						local t = fs.list(sDestMountPath)
+						for n = 1, #t do
+							fs.delete(sDestMountPath .. "/" .. t[n])
+						end
+						t = fs.list(sSourceMountPath)
+						for n = 1, #t do
+							fs.copy(sSourceMountPath .. "/" .. t[n], sDestMountPath .. "/" .. t[n])
+						end
+						local sLabel = disk.getLabel(sSide) or ""
+						disk.setLabel(sDestSide, sLabel)
+						WUI.clear("Disk Manager")
+						WUI.slowPrint("Data on disk cloned to disk in " .. sDestSide .. " drive.", nil, nil, true)
+					end
+				end,
+				["Format Disk"] = function()
+					WUI.clear("Disk Manager")
+					if WUI.choiceMenu("Format disk?") then
+						local delete = function() fs.delete(WDM.sIteratorDir() .. WDM.sIteratorItem()) end
+						WDM.iterateThroughDir(disk.getMountPath(sSide) .. "/", delete, delete)
+						disk.setLabel(sSide, "")
+						WUI.clear("Disk Manager")
+						WUI.slowPrint("Disk formatted.", nil, nil, true)
+					end
+				end,
+				["Encrypt Disk"] = function()
+					WUI.clear("Disk Manager")
+					while true do
+						WUI.slowPrint("Enter new encryption key: \n")
+						WUI.registerTextField(nil, "%w", 16, true)
+						local t = WUI.getText(true)
+						if t then
+							local sNewKey = t[1]
+							if #sNewKey < 8 then
+								WUI.slowPrint("Encryption keys must be between 8 and 16 characters! \n")
+							else
+								WDM.encryptDir(disk.getMountPath(sSide) .. "/", sNewKey)
+								WDM.fWrite(disk.getMountPath(sSide) .. "/.encrypt", encryption.encrypt(sNewKey, sNewKey))
+								WUI.clear("Disk Manager")
+								WUI.slowPrint("Disk encrypted.", nil, nil, true)
+								break
+							end
+						else
 							break
 						end
-					else
-						break
 					end
-				end
-			end,
-			["Remove Encryption"] = function()
-				WUI.clear("Disk Manager")
-				local bSuccess, sKey = WUI.correctKey("Disk Manager", disk.getMountPath(sSide) .. "/.encrypt", true)
-				if bSuccess then
-					WDM.decryptDir(disk.getMountPath(sSide) .. "/", sKey)
-					fs.delete(disk.getMountPath(sSide) .. "/.encrypt")
+				end,
+				["Remove Encryption"] = function()
 					WUI.clear("Disk Manager")
-					WUI.slowPrint("Disk decrypted.", nil, nil, true)
-				end
-			end,
-			["Return"] = function() end,
-			["disk_eject"] = function() end
-		}
-		local sSelection = WUI.menu(tChoices, "Disk Manager", "Disk Manager", true, {["disk_eject"] = sSide})
-		tActions[sSelection]()
+					local bSuccess, sKey = WUI.correctKey("Disk Manager", disk.getMountPath(sSide) .. "/.encrypt", true)
+					if bSuccess then
+						WDM.decryptDir(disk.getMountPath(sSide) .. "/", sKey)
+						fs.delete(disk.getMountPath(sSide) .. "/.encrypt")
+						WUI.clear("Disk Manager")
+						WUI.slowPrint("Disk decrypted.", nil, nil, true)
+					end
+				end,
+			}
+			local sSelection = WUI.menu(tChoices, "Disk Manager", "Disk Manager", true, {["disk_eject"] = sSide})
+			if sSelection == "Return" or sSelection == "disk_eject" then
+				break
+			else
+				tActions[sSelection]()
+			end
+		end
 	else
 		bMenuLoop = false os.run({}, WDM.getSystemDir() .. "utilityMenu")
 	end
