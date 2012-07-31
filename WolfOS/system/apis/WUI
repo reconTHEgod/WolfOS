@@ -461,3 +461,18 @@ function correctPass(sProgram, bReturn)
 	end
 	return false
 end
+
+function correctKey(sProgram, sPath, bReturn)
+	slowPrint("Please enter the encryption key: \n")
+	registerTextField(nil, "%w", 16, true)
+	local t = getText(bReturn)
+	if t then
+		local sKey = t[1]
+		if encryption.decrypt(WDM.readAllText(sPath), sKey) == sKey then
+			return true, sKey
+		end
+		clear(sProgram)
+		slowPrint("Incorrect encryption key!", nil, nil, true)
+	end
+	return false, nil
+end

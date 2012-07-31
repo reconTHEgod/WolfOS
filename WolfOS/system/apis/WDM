@@ -309,3 +309,44 @@ function scaleBytes(nRawBytes)
 		return string.sub(tostring(nRawBytes / 1000000), 1, nDecimalPoint + 1) .. " MB"
 	end
 end
+
+function isDiskEncrypted(sSide)
+	if exists(disk.getMountPath(sSide) .. "/.encrypt") then
+		return true
+	end
+	return false
+end
+
+function encryptDir(sEncryptDir, sKey)
+	local encryptDirs = function()
+		fs.move(_sIteratorDir .. _sIteratorItem, _sIteratorDir .. encryption.encrypt(_sIteratorItem, sKey))
+	end
+	local encryptFiles = function()
+		local tFile = seperateString(_sIteratorItem, "%.")
+		local tData = readToTable(_sIteratorDir .. _sIteratorItem)
+		for nLine = 1, #tData do
+			tData[nLine] = encryption.encrypt(tData[nLine], sKey)
+		end
+		local sExt = tFile[2] or ""
+		fWriteFromTable(_sIteratorDir .. encryption.encrypt(tFile[1], sKey) .. "." .. sExt, tData)
+		fs.delete(_sIteratorDir .. _sIteratorItem)
+	end
+	iterateThroughDir(sEncryptDir, encryptFiles, encryptDirs)
+end
+
+function decryptDir(sDecryptDir, sKey)
+	local decryptDirs = function()
+		fs.move(_sIteratorDir .. _sIteratorItem, _sIteratorDir .. encryption.decrypt(_sIteratorItem, sKey))
+	end
+	local decryptFiles = function()
+		local tFile = seperateString(_sIteratorItem, "%.")
+		local tData = readToTable(_sIteratorDir .. _sIteratorItem)
+		for nLine = 1, #tData do
+			tData[nLine] = encryption.decrypt(tData[nLine], sKey)
+		end
+		local sExt = tFile[2] or ""
+		fWriteFromTable(_sIteratorDir .. encryption.decrypt(tFile[1], sKey) .. "." .. sExt, tData)
+		fs.delete(_sIteratorDir .. _sIteratorItem)
+	end
+	iterateThroughDir(sDecryptDir, decryptFiles, decryptDirs)
+end

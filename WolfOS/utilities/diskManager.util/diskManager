@@ -74,6 +74,38 @@ while bMenuLoop == true do
 					WUI.slowPrint("Disk formatted.", nil, nil, true)
 				end
 			end,
+			["Encrypt Disk"] = function()
+				WUI.clear("Disk Manager")
+				while true do
+					WUI.slowPrint("Enter new encryption key: \n")
+					WUI.registerTextField(nil, "%w", 16, true)
+					local t = WUI.getText(true)
+					if t then
+						local sNewKey = t[1]
+						if #sNewKey < 8 then
+							WUI.slowPrint("Encryption keys must be between 8 and 16 characters! \n")
+                        else
+							WDM.encryptDir(disk.getMountPath(sSide) .. "/", sNewKey)
+							WDM.fWrite(disk.getMountPath(sSide) .. "/.encrypt", encryption.encrypt(sNewKey, sNewKey))
+                            WUI.clear("Disk Manager")
+							WUI.slowPrint("Disk encrypted.", nil, nil, true)
+							break
+						end
+					else
+						break
+					end
+				end
+			end,
+			["Remove Encryption"] = function()
+				WUI.clear("Disk Manager")
+				local bSuccess, sKey = WUI.correctKey("Disk Manager", disk.getMountPath(sSide) .. "/.encrypt", true)
+				if bSuccess then
+					WDM.decryptDir(disk.getMountPath(sSide) .. "/", sKey)
+					fs.delete(disk.getMountPath(sSide) .. "/.encrypt")
+					WUI.clear("Disk Manager")
+					WUI.slowPrint("Disk decrypted.", nil, nil, true)
+				end
+			end,
 			["Return"] = function() end,
 			["disk_eject"] = function() end
 		}
