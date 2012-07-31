@@ -18,7 +18,7 @@ function generateUID()
 end
 
 function encryptPasscode(sString)
-	return strUtils.SHA1(sString)
+	return hash.sha256(sString)
 end
 
 function createUser(sUser, sPass)
