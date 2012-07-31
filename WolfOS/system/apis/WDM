@@ -263,10 +263,12 @@ function backOneDir(sPath)
 	return sNewPath
 end
 
-function iterateThroughDir(sDir, fDirs, fFiles)
-	for _, sItem in ipairs(fs.list(sDir)) do
-		if fs.isDir(sDir .. sItem) then
-			encryptDir(sDir .. sItem .. "/", fDirs, fFiles)
+function iterateThroughDir(sIteratorDir, fDirs, fFiles)
+	for _, sIteratorItem in ipairs(fs.list(sIteratorDir)) do
+		_sIteratorDir = sIteratorDir
+		_sIteratorItem = sIteratorItem
+		if fs.isDir(sIteratorDir .. sIteratorItem) then
+			iterateThroughDir(sIteratorDir .. sIteratorItem .. "/", fDirs, fFiles)
 			fDirs()
 		else
 			fFiles()
