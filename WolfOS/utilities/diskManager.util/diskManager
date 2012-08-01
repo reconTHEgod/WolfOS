@@ -83,6 +83,7 @@ while bMenuLoop == true do
 						WUI.slowPrint("Enter new encryption key: \n")
 						WUI.registerTextField(nil, "%w", 16, true)
 						local t = WUI.getText(true)
+						WUI.clear("Disk Manager")
 						if t then
 							local sNewKey = t[1]
 							if #sNewKey < 8 then
