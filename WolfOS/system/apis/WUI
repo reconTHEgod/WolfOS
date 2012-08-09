@@ -86,7 +86,7 @@ function slowWrite(sString, xPos, yPos, bSleep)
 				end
 			else
 				term.write(tWords[nWord])
-				if not string.find(tWords[nWord], "%s")then sleep(0.01) end
+				if not string.find(tWords[nWord], "%s") then sleep(0.01) end
 				nWord = nWord + 1
 			end
 		end
@@ -253,11 +253,12 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
 					sLine = sLine .. tChoices[nLine + nScroll]
 				end
 			end
-			if bFirst == true then slowWrite(sLine, 1, nLine + 5) bFirst = false else fastWrite(sLine, 1, nLine + 5) end
+			if bFirst == true then slowWrite(sLine, 1, nLine + 5) else fastWrite(sLine, 1, nLine + 5) end
 		end
 	end
 	while true do
 		redraw()
+		bFirst = false
 		local sEvent = nil
 		repeat
 			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
