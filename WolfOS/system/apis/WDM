@@ -163,7 +163,7 @@ function writeSystemTemp(sString, sIndex)
 end
 
 function writeSystemData(sString, sIndex)
-	tSystemData = readAllText(getSystemDataDir() .. "system.dat")
+	tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(getSystemDataDir() .. "system.dat")))
 	if sIndex ~= "version" and sIndex ~= "modem_port" and sIndex ~= "modem_state" and sIndex ~= "monitor_port" and sIndex ~= "monitor_state" and sIndex ~= "offline" and sIndex ~= "mainframe_id" and sIndex ~= "relay_id" then
 		error("Attempt to write to unknown index!")
 	end
