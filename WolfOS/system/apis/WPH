@@ -4,8 +4,8 @@ Please ask for permission before attempting to redistribute any code relating to
 --WolfOS Peripheral Handling
 
 function getValidSides()
-	local _t = {"top", "bottom", "front", "back", "left", "right"}
-	return _t
+	local tSides = {"top", "bottom", "front", "back", "left", "right"}
+	return tSides
 end
 
 function getType(sSide)
@@ -13,13 +13,11 @@ function getType(sSide)
 end
 
 function getAllPeripherals()
-	local tSides = {}
-	local tTypes = {}
+	local tPeripherals = {}
 	for _, sSide in ipairs(getValidSides()) do
 		if peripheral.isPresent(sSide) then
-			table.insert(tSides, sSide)
-			table.insert(tTypes, getType(sSide))
+			tPeripherals[sSide] = getType(sSide)
 		end
 	end
-	return tSides, tTypes
+	return tPeripherals
 end
