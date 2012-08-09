@@ -452,7 +452,7 @@ function correctPass(sProgram, bReturn)
 	local t = getText(bReturn)
 	if t then
 		local sPass = t[1]
-		if WAU.encryptPasscode(sPass) == WDM.readSystemTemp("current_hash") then
+		if hash.sha256(sPass) == WDM.readSystemTemp("current_hash") then
 			return true
 		end
 		clear(sProgram)
