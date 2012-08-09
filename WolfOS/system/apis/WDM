@@ -168,7 +168,7 @@ function writeSystemData(sString, sIndex)
 		error("Attempt to write to unknown index!")
 	end
 	tSystemData[sIndex] = sString
-	fWrite(getSystemDir() .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
+	fWrite(getSystemDataDir() .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
 end
 
 function list(sDir)
