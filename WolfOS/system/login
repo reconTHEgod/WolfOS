@@ -9,14 +9,14 @@ WUI.registerTextField(10, "%w", 16, true)
 local t = WUI.getText(true)
 if t then
 	local sUserInput, sPassInput = t[1], t[2]
-	local bValidUser, sUID, sUserType = WAU.checkLogin(sUserInput, sPassInput)
+	local tUser = WAU.checkLogin(sUserInput, WAU.encryptPasscode(sPassInput))
 	WUI.clear("Startup Menu")
-	if bValidUser then
+	if tUser then
 		WUI.slowPrint("Logging in...", nil, nil, true)
-		WDM.writeSystemTemp(sUID, "current_uid")
-		WDM.writeSystemTemp(sUserInput, "current_user")
-		WDM.writeSystemTemp(WAU.encryptPasscode(sPassInput), "current_hash")
-		WDM.writeSystemTemp(sUserType, "current_type")
+		WDM.writeSystemTemp(tUser.uid, "current_uid")
+		WDM.writeSystemTemp(tUser.name, "current_user")
+		WDM.writeSystemTemp(tUser.hash, "current_hash")
+		WDM.writeSystemTemp(tUser.type, "current_type")
 		os.run({}, WDM.getSystemDir() .. "mainMenu")
 	else
 		WUI.slowPrint("Incorrect User Account ID or Passcode!", nil, nil, true)

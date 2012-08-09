@@ -3,6 +3,8 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Account Utilities
 
+local tUsers = {}
+
 function generateUID()
 	local sUID = ""
 	local _t = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
@@ -21,37 +23,37 @@ encryptPasscode = hash.sha256
 
 function createUser(sUser, sPass)
 	local sUID = generateUID()
-	WDM.fAppend(WDM.getSystemDataDir() .. "users.dat", sUID .. "\\" .. sUser .. "\\" .. encryptPasscode(sPass) .. "\\user")
+	tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
+	table.insert(tUsers, {["uid"] = sUID, ["name"] = sUser, ["hash"] = encryptPasscode(sPass), ["type"] = "user"})
 	fs.makeDir(WDM.getUsersDir() .. sUID .. "/")
+	WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", textutils.serialize(tUsers))
 end
 
 function exists(sUID, sUser)
-	local tUsers = WDM.readToTable(WDM.getSystemDataDir() .. "users.dat")
-	for nUser = 1, #tUsers do
-		local tData = WDM.seperateString(tUsers[nUser], "\\")
-		if sUID == tData[1] or sUser == tData[2] then
-			return true, tData[1], tData[2], tData[3], tData[4], nUser
+	tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
+	for nUser, tUser in ipairs(tUsers) do
+		if sUID == tUser.uid or sUser == tUser.name then
+			return tUser, nUser
 		end
+	end
+	return nil
+end
+
+function changeUserData(sUID, sIndex, sString)
+	local tUser, nUser = exists(sUID)
+	if tUser then
+		tUser[sIndex] = sString
+		tUsers[nUser] = tUser
+		WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 	end
 end
 
-function changeUserData(sUID, sLine, sString)
-	if sLine == "pass" then sString = encryptPasscode(sString) end
-	local bExists, _, sUser, sPass, sType, nUser = exists(sUID)
-	if bExists then
-		local _t = {["user"] = 2, ["pass"] = 3, ["type"] = 4}
-		local tData = {sUID, sUser, sPass, sType}
-		tData[_t[sLine]] = sString
-		WDM.replaceLine(WDM.getSystemDataDir() .. "users.dat", nUser, tData[1] .. "\\" .. tData[2] .. "\\" .. tData[3] .. "\\" .. tData[4])
-	end
-end
-
-function checkLogin(sUser, sPass)
-	local bExists, sUID, _sUser, _sPass, sType = exists(nil, sUser)
-	if bExists then
-		if sUser == _sUser and encryptPasscode(sPass) == _sPass then
-			return true, sUID, sType
+function checkLogin(sUser, sHash)
+	local tUser = exists(nil, sUser)
+	if tUser then
+		if sUser == tUser.name and sHash == tUser.hash then
+			return tUser
 		end
 	end
-	return false
+	return nil
 end
