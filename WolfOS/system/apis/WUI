@@ -253,14 +253,15 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
 					sLine = sLine .. tChoices[nLine + nScroll]
 				end
 			end
-			if bFirst == true then slowWrite(sLine, 1, nLine + 5) else fastWrite(sLine, 1, nLine + 5) end
+			if bFirst == true then slowWrite(sLine, 1, nLine + 5) bFirst = false else fastWrite(sLine, 1, nLine + 5) end
 		end
 	end
 	while true do
 		redraw()
-		bFirst = false
 		local sEvent = nil
-		sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
+		repeat
+			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
+		until sEvent == "key" or (tEventFilters and tEventFilters[sEvent])
 		if sEvent == "key" and p1 == 200 then
 			if tOptions[nSelection - 1] then
 				nSelection = nSelection - 1
