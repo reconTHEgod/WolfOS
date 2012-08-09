@@ -3,6 +3,7 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Data Management Library
 
+local tSystemData, tSystemTemp = {}, {}
 local _sIteratorDir, _sIteratorItem = "", ""
 
 function sIteratorDir()
@@ -142,42 +143,32 @@ end
 
 function getDataDir(sProgram)
 	local sProgram = sProgram or ""
-	return getRoot() .. "appdata/pers/" .. sProgram .. "/"
+	return getRoot() .. "appdata/" .. sProgram .. "/"
 end
 
-function getTempDir(sProgram)
-	local sProgram = sProgram or ""
-	return getRoot() .. "appdata/temp/" .. sProgram .. "/"
+function readSystemTemp(sIndex)
+	return tSystemTemp[sIndex]
 end
 
-function readSystemTemp(sLine)
-	local _t = {["current_uid"] = 1, ["current_user"] = 2, ["current_hash"] = 3, ["current_type"] = 4}
-	return readLine(getSystemDataDir() .. "temp.dat", _t[sLine])
+function readSystemData(sIndex)
+	tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(getSystemDataDir() .. "system.dat")))
+	return tSystemData[sIndex]
 end
 
-function readSystemData(sLine)
-	local _t = {["version"] = 1, ["modem_port"] = 2, ["modem_state"] = 3, ["monitor_port"] = 4, ["monitor_state"] = 5, ["offline"] = 6, ["mainframe_id"] = 7, ["relay_id"] = 8}
-	local _s = readLine(getSystemDataDir() .. "pers.dat", _t[sLine])
-	if _s ~= "\\" then return _s end
-	return nil
-end
-
-function writeSystemTemp(sString, sLine)
-	local _t = {["current_uid"] = 1, ["current_user"] = 2, ["current_hash"] = 3, ["current_type"] = 4}
-	replaceLine(getSystemDataDir() .. "temp.dat", _t[sLine], sString)
-end
-
-function writeSystemData(sString, sLine)
-	local _t = {["version"] = 1, ["modem_port"] = 2, ["modem_state"] = 3, ["monitor_port"] = 4, ["monitor_state"] = 5, ["offline"] = 6, ["mainframe_id"] = 7, ["relay_id"] = 8}
-	replaceLine(getSystemDataDir() .. "pers.dat", _t[sLine], sString)
-end
-
-function clearTemp()
-	local tPrograms = list(getTempDir())
-	for n = 1, #tPrograms do
-		fs.delete(getTempDir() .. tPrograms[n])
+function writeSystemTemp(sString, sIndex)
+	if sIndex ~= "current_uid" and sIndex ~= "current_user" and sIndex ~= "current_hash" and sIndex ~= "current_type" then
+		error("Attempt to write to unknown index!")
 	end
-	fWrite(getSystemDir() .. "data/temp.dat", "")
+	tSystemTemp[sIndex] = sString
+end
+
+function writeSystemData(sString, sIndex)
+	tSystemData = readAllText(getSystemDataDir() .. "system.dat")
+	if sIndex ~= "version" and sIndex ~= "modem_port" and sIndex ~= "modem_state" and sIndex ~= "monitor_port" and sIndex ~= "monitor_state" and sIndex ~= "offline" and sIndex ~= "mainframe_id" and sIndex ~= "relay_id" then
+		error("Attempt to write to unknown index!")
+	end
+	tSystemData[sIndex] = sString
+	fWrite(getSystemDir() .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
 end
 
 function list(sDir)
