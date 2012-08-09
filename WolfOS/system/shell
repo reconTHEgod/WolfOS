@@ -10,14 +10,11 @@ local tAPIS = fs.list("/WolfOS/system/apis")
 for n = 1, #tAPIS do
 	os.loadAPI("/WolfOS/system/apis/" .. tAPIS[n])
 end
-print("Clearing temporary data...")
-sleep(0.01)
-WDM.clearTemp()
 local sModemPort = WDM.readSystemData("modem_port")
 if sModemPort then
 	if WPH.getType(sModemPort) ~= "modem" then
-		WDM.writeSystemData("\\", "modem_port")
-	elseif WDM.readSystemData("modem_state") == "true" and WPH.getType(sModemPort) == "modem" then
+		WDM.writeSystemData(nil, "modem_port")
+	elseif WDM.readSystemData("modem_state") and WPH.getType(sModemPort) == "modem" then
 		print("Initiating modem...")
 		rednet.open(sModemPort)
 	end
@@ -25,14 +22,12 @@ end
 local sMonitorPort = WDM.readSystemData("monitor_port")
 if sMonitorPort then
 	if WPH.getType(sMonitorPort) ~= "monitor" then
-		WDM.writeSystemData("\\", "monitor_port")
-	elseif WDM.readSystemData("monitor_state") == "true" and WPH.getType(sMonitorPort) == "monitor" then
+		WDM.writeSystemData(nil, "monitor_port")
+	elseif WDM.readSystemData("monitor_state") and WPH.getType(sMonitorPort) == "monitor" then
 		print("Initiating monitor...")
 		term.redirect(peripheral.wrap(sMonitorPort))
-		if WDM.readSystemData("monitor_state") == "true" then
-			print("Synchronising with monitor...")
-			term.syncScreens(true)
-		end
+		print("Synchronising with monitor...")
+		term.syncScreens(true)
 	end
 end
 print("Starting WolfOS...")
@@ -46,9 +41,9 @@ local runClock = WUI.setupClock()
 parallel.waitForAny(runOS, runClock)
 
 sleep(1)
-pcall( function()
-	term.setCursorBlink( false )
-	print( "Press any key to continue" )
-	os.pullEvent( "key" ) 
-end )
+pcall(function()
+	term.setCursorBlink(false)
+	print("Press any key to continue")
+	os.pullEvent("key") 
+end)
 os.shutdown()
