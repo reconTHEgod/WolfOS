@@ -119,6 +119,6 @@ while bMenuLoop == true do
 			end
 		end
 	else
-		bMenuLoop = false os.run({}, WDM.getSystemDir() .. "utilityMenu")
+		bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "utilityMenu")
 	end
 end

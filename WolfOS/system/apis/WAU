@@ -3,7 +3,7 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Account Utilities
 
-local tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
+local tUsers = {}
 
 function generateUID()
 	local sUID = ""
@@ -20,6 +20,7 @@ function generateUID()
 end
 
 function exists(sUID, sUser)
+	if #tUsers == 0 then tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat"))) end
 	for nUser, tUser in ipairs(tUsers) do
 		if sUID == tUser.uid or sUser == tUser.name then
 			return tUser, nUser

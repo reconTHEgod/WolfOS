@@ -8,7 +8,7 @@ local _utils, _progs, _users, _appdata, _system = _root .. "utilities/", _root .
 local _data = _system .. "data/"
 
 local tSystemDirs = {["root"] = _root, ["utilities"] = _utils, ["programs"] = _progs, ["users"] = _users, ["appdata"] = _appdata, ["system"] = _system, ["data"] = _data}
-local tSystemData, tSystemTemp = textutils.unserialize(encryption.fromBase64(readAllText(getSystemDataDir() .. "system.dat"))), {}
+local tSystemData, tSystemTemp = {}, {}
 local _sIteratorDir, _sIteratorItem = "", ""
 
 function sIteratorDir()
@@ -131,21 +131,22 @@ function readSystemTemp(sIndex)
 end
 
 function readSystemData(sIndex)
-	tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat")))
+	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	return tSystemData[sIndex]
 end
 
 function writeSystemTemp(sString, sIndex)
 	if sIndex ~= "current_uid" and sIndex ~= "current_user" and sIndex ~= "current_hash" and sIndex ~= "current_type" then
-		error("Attempt to write to unknown index!")
+		error("Attempt to write to unknown index!", 2)
 	end
 	tSystemTemp[sIndex] = sString
 end
 
 function writeSystemData(sString, sIndex)
 	if sIndex ~= "version" and sIndex ~= "modem_port" and sIndex ~= "modem_state" and sIndex ~= "monitor_port" and sIndex ~= "monitor_state" and sIndex ~= "offline" and sIndex ~= "mainframe_id" and sIndex ~= "relay_id" then
-		error("Attempt to write to unknown index!")
+		error("Attempt to write to unknown index!", 2)
 	end
+	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	tSystemData[sIndex] = sString
 	fWrite(tSystemDirs.data .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
 end

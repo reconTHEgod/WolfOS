@@ -17,7 +17,7 @@ if t then
 		WDM.writeSystemTemp(tUser.name, "current_user")
 		WDM.writeSystemTemp(tUser.hash, "current_hash")
 		WDM.writeSystemTemp(tUser.type, "current_type")
-		os.run({}, WDM.getSystemDir() .. "mainMenu")
+		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 	else
 		WUI.slowPrint("Incorrect User Account ID or Passcode!", nil, nil, true)
 		os.run({}, WDM.getSystemDir("system") .. "startupMenu")
