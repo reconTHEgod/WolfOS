@@ -6,9 +6,9 @@ local sUser = WDM.readSystemTemp("current_user")
 while bMenuLoop == true do
 	local tChoices = {"Programs", "Utilities", "Control Panel", "\\", "Logout", "\\", "Reboot", "Shutdown"}
 	local tActions = {
-		["Programs"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "programMenu") end,
-		["Utilities"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "utilityMenu") end,
-		["Control Panel"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "controlPanel") end,
+		["Programs"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end,
+		["Utilities"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "utilityMenu") end,
+		["Control Panel"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "controlPanel") end,
 		["Logout"] = function() bMenuLoop = false WUI.logout() end,
 		["Reboot"] = function() bMenuLoop = false WUI.reboot() end,
 		["Shutdown"] = function() bMenuLoop = false WUI.shutdown() end

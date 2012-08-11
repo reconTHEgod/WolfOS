@@ -6,7 +6,7 @@ local tChoices = {}
 local tActions = {}
 local sUser = WDM.readSystemTemp("current_user")
 repeat
-	local tAll = WDM.list(WDM.getProgramsDir())
+	local tAll = WDM.list(WDM.getSystemDir("programs"))
 	for nItem = 1, #tAll do
 		if string.sub(tAll[nItem], #tAll[nItem] - 4) == ".prog" then
 			local sName = WDM.deCamelCase(string.sub(tAll[nItem], 1, #tAll[nItem] - 5))
@@ -16,10 +16,10 @@ repeat
 	local sSelection = WUI.menu(tChoices, "Welcome '" .. sUser .. "'!", "Program Menu", true)		
 	if sSelection == "Return" then
 		bMenuLoop = false
-		os.run({}, WDM.getSystemDir() .. "mainMenu")
+		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 	else
 		bMenuLoop = false
 		local sName = WDM.camelCase(sSelection)
-		os.run({}, WDM.getProgramsDir() .. sName .. ".prog/" .. sName)
+		os.run({}, WDM.getSystemDir("programs") .. sName .. ".prog/" .. sName)
 	end
 until bMenuLoop == false

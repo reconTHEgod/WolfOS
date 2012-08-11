@@ -5,7 +5,7 @@ local bMenuLoop = true
 while bMenuLoop == true do
 	local tChoices = {"Login", "\\", "Reboot", "Shutdown"}
 	local tActions = {
-		["Login"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "login") end,
+		["Login"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "login") end,
 		["Reboot"] = function() bMenuLoop = false WUI.reboot() end,
 		["Shutdown"] = function() bMenuLoop = false WUI.shutdown() end
 	}

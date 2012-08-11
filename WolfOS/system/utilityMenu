@@ -6,7 +6,7 @@ local tChoices = {}
 local tActions = {}
 local sUser = WDM.readSystemTemp("current_user")
 while bMenuLoop == true do
-	local tAll = WDM.list(WDM.getUtilitiesDir())
+	local tAll = WDM.list(WDM.getSystemDir("utilities"))
 	for nItem = 1, #tAll do
 		if string.sub(tAll[nItem], #tAll[nItem] - 4) == ".util" then
 			local sName = WDM.deCamelCase(string.sub(tAll[nItem], 1, #tAll[nItem] - 5))
@@ -16,10 +16,10 @@ while bMenuLoop == true do
 	local sSelection = WUI.menu(tChoices, "Welcome '" .. sUser .. "'!", "Utility Menu", true)		
 	if sSelection == "Return" then
 		bMenuLoop = false
-		os.run({}, WDM.getSystemDir() .. "mainMenu")
+		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 	else
 		bMenuLoop = false
 		local sName = WDM.camelCase(sSelection)
-		os.run({}, WDM.getUtilitiesDir() .. sName .. ".util/" .. sName)
+		os.run({}, WDM.getSystemDir("utilities") .. sName .. ".util/" .. sName)
 	end
 end

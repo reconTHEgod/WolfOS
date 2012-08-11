@@ -3,7 +3,7 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Account Utilities
 
-local tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
+local tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
 
 function generateUID()
 	local sUID = ""
@@ -31,17 +31,16 @@ end
 function createUser(sUser, sHash)
 	local sUID = generateUID()
 	tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sUser, ["hash"] = sHash, ["type"] = "user"}
-	WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
-	fs.makeDir(WDM.getUsersDir() .. sUID .. "/")
+	WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+	fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
 end
 
 function removeUser(sUID)
 	local tUser, nUser = exists(sUID)
 	if tUser then
 		tUsers[nUser] = nil
-		WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
-		fs.delete(WDM.getUsersDir() .. sUID .. "/")
-		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
+		WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+		fs.delete(WDM.getSystemDir("users") .. sUID .. "/")
 	end
 end
 
@@ -50,8 +49,7 @@ function changeUserData(sUID, sIndex, sString)
 	if tUser then
 		tUser[sIndex] = sString
 		tUsers[nUser] = tUser
-		WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
-		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
+		WDM.fWrite(WDM.getSystemDir("users") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 	end
 end
 

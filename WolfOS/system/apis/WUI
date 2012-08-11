@@ -169,7 +169,7 @@ function logout()
 		disk.stopAudio(sSide)
 	end
 	slowPrint("Logging out...", nil, nil, true)
-	os.run({}, WDM.getSystemDir() .. "startupMenu")
+	os.run({}, WDM.getSystemDir("system") .. "startupMenu")
 end
 
 function shutdown()
