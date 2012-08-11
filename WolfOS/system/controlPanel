@@ -3,9 +3,9 @@ Please ask for permission before attempting to redistribute any code relating to
 
 local editUser = function(sUser)
 	while true do
-		local _, sUID, sUser, _, sType, nPos = WAU.exists(nil, sUser)
-		if sUID then
-			tChoices = {"\\Unique ID: " .. sUID, "\\User Account ID: " .. sUser, "\\User Account Type: " .. string.upper(string.sub(sType, 1, 1)) .. string.sub(sType, 2), "\\", "Change User Account ID", "Change Passcode", "Change User Account Type", "Delete User Account"}
+		local tUser = WAU.exists(nil, sUser)
+		if tUser then
+			tChoices = {"\\Unique ID: " .. tUser.uid, "\\User Account ID: " .. tUser.name, "\\User Account Type: " .. string.upper(string.sub(tUser.type, 1, 1)) .. string.sub(tUser.type, 2), "\\", "Change User Account ID", "Change Passcode", "Change User Account Type", "Delete User Account"}
 			tActions = {
 				["Change User Account ID"] = function()
 					WUI.clear("Control Panel")
@@ -24,7 +24,7 @@ local editUser = function(sUser)
 								elseif WAU.exists(nil, sNewUser) then
 									WUI.slowPrint("User Account ID already in use! \n")
 								else
-									WAU.changeUserData(sUID, "user", sNewUser)
+									WAU.changeUserData(tUser.uid, "user", sNewUser)
 									WUI.clear("Control Panel")
 									WUI.slowPrint("User Account ID changed successfully!", nil, nil, true)
 									break
@@ -50,7 +50,7 @@ local editUser = function(sUser)
 								if #sNewPass < 8 then
 									WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
 								else
-									WAU.changeUserData(sUID, "pass", sNewPass)
+									WAU.changeUserData(tUser.uid, "pass", sNewPass)
 									WUI.clear("Control Panel")
 									WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
 									break
@@ -67,7 +67,7 @@ local editUser = function(sUser)
 						WUI.clear("Control Panel")
 						tChoices = {"Admin", "User"}
 						local sNewType = WUI.menu(tChoices, "User Account Type:", "Control Panel", true)
-						WAU.changeUserData(sUID, "type", string.lower(sNewType))
+						WAU.changeUserData(tUser.uid, "type", string.lower(sNewType))
 						WUI.clear("Control Panel")
 						WUI.slowPrint("User Account type changed successfully!", nil, nil, true)
 					end
@@ -77,8 +77,7 @@ local editUser = function(sUser)
 					if WUI.correctPass("Control Panel", true) then
 						WUI.clear("Control Panel")
 						if WUI.choiceMenu("Delete User Account?") then
-							WDM.removeLine(WDM.getSystemDataDir() .. "users.dat", nPos)
-							fs.delete(WDM.getUsersDir() .. sUID)
+							WAU.removeUser(tUser.uid)
 							WUI.clear("Control Panel")
 							WUI.slowPrint("User Account deleted successfully!", nil, nil, true)
 						end
@@ -126,7 +125,7 @@ repeat
 				local sOffline = WDM.readSystemData("offline")
 				local sMainframeID = WDM.readSystemData("mainframe_id")
 				local sRelayID = WDM.readSystemData("relay_id")
-				if sOffline == "true" then sMainframeID = "OFFLINE" sRelayID = "OFFLINE" end
+				if sOffline then sMainframeID = "OFFLINE" sRelayID = "OFFLINE" end
 				local sSelection = nil
 				repeat
 					tChoices = {
@@ -148,7 +147,7 @@ repeat
 			end,
 			["User Account Settings"] = function() nMenuNum = 2 end,
 			["System Settings"] = function() nMenuNum = 3 end,
-			["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir() .. "mainMenu") end
+			["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "mainMenu") end
 		}
 		local sSelection = WUI.menu(tChoices, "Control Panel:", "Control Panel", true)
 		tActions[sSelection]()
@@ -214,13 +213,13 @@ repeat
 			["Edit User Account"] = function()
 				while true do
 					tChoices = {}
-					local tAll = WDM.readToTable(WDM.getSystemDataDir() .. "users.dat")
+					local tAll = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
 					local tAdmins, tUsers = {}, {}
-					for nUser = 1, #tAll do
-						if WDM.seperateString(tAll[nUser], "\\")[4] == "admin" then
-							table.insert(tAdmins, WDM.seperateString(tAll[nUser], "\\")[2])
+					for nUser, tUser in ipairs(tAll) do
+						if tUser.type == "admin" then
+							tAdmins[#tAdmins + 1] = tUser.name
 						else
-							table.insert(tUsers, WDM.seperateString(tAll[nUser], "\\")[2])
+							tUsers[#tUsers + 1] = tUser.name
 						end
 					end
 					for n = 1, #tAdmins do
