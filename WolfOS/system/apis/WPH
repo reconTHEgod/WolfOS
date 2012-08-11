@@ -8,9 +8,7 @@ function getValidSides()
 	return tSides
 end
 
-function getType(sSide)
-	return peripheral.getType(sSide)
-end
+getType = peripheral.getType
 
 function getAllPeripherals()
 	local tPeripherals = {}
