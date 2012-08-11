@@ -3,7 +3,7 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Account Utilities
 
-local tUsers = {}
+local tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
 
 function generateUID()
 	local sUID = ""
@@ -19,18 +19,7 @@ function generateUID()
 	return sUID
 end
 
-encryptPasscode = hash.sha256
-
-function createUser(sUser, sPass)
-	local sUID = generateUID()
-	tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
-	table.insert(tUsers, {["uid"] = sUID, ["name"] = sUser, ["hash"] = encryptPasscode(sPass), ["type"] = "user"})
-	fs.makeDir(WDM.getUsersDir() .. sUID .. "/")
-	WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", textutils.serialize(tUsers))
-end
-
 function exists(sUID, sUser)
-	tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
 	for nUser, tUser in ipairs(tUsers) do
 		if sUID == tUser.uid or sUser == tUser.name then
 			return tUser, nUser
@@ -39,12 +28,30 @@ function exists(sUID, sUser)
 	return nil
 end
 
+function createUser(sUser, sHash)
+	local sUID = generateUID()
+	tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sUser, ["hash"] = sHash, ["type"] = "user"}
+	WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+	fs.makeDir(WDM.getUsersDir() .. sUID .. "/")
+end
+
+function removeUser(sUID)
+	local tUser, nUser = exists(sUID)
+	if tUser then
+		tUsers[nUser] = nil
+		WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+		fs.delete(WDM.getUsersDir() .. sUID .. "/")
+		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
+	end
+end
+
 function changeUserData(sUID, sIndex, sString)
 	local tUser, nUser = exists(sUID)
 	if tUser then
 		tUser[sIndex] = sString
 		tUsers[nUser] = tUser
 		WDM.fWrite(WDM.getSystemDataDir() .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDataDir() .. "users.dat")))
 	end
 end
 
