@@ -34,14 +34,14 @@ function broadcast(sEvent, p1, p2, p3, p4, p5)
 	rednet.broadcast(encryptData(nil, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))	
 end
 
-function receive(nTimeout)
+function receive(nSenderFilter, nTimeout)
 	local timer = nil
 	if nTimeout then timer = os.startTimer(nTimeout) end
 	while true do
 		local _event, p1, p2 = os.pullEvent()
 		if _event == "rednet_message" then
 			local nSenderID, nReceiverID, sMessage = decryptData(p2)
-			if nReceiverID == os.getComputerID() or not nReceiverID then
+			if (nReceiverID == os.getComputerID() or not nReceiverID) and (nSenderFilter == nSenderID or not nSenderFilter) then
 				local sEvent, p1, p2, p3, p4, p5 = unpack(textutils.unserialize(sMessage))
 				return nSenderID, sEvent, p1, p2, p3, p4, p5
 			end

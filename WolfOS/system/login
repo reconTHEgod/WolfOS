@@ -9,9 +9,28 @@ WUI.registerTextField(10, "%w", 16, true)
 local t = WUI.getText(true)
 if t then
 	local sUserInput, sPassInput = t[1], t[2]
-	local tUser = WAU.checkLogin(sUserInput, hash.sha256(sPassInput))
+	local tUser
+	if WDM.readSystemData("offline") then
+		tUser = WAU.checkLogin(sUserInput, hash.sha256(sPassInput))
+	else
+		WNC.send(WDM.readSystemData("mainframe_id"), "connection_request", sUserInput, hash.sha256(sPassInput))
+		local nSenderID, sEvent, p1 = WNC.receive(WDM.readSystemData("mainframe_id"), 10)
+		tUser = p1
+		if sEvent == "connection_failure" then
+			if p1 == "invalid_user" then
+				tUser = nil
+			else
+				WUI.clear("Startup Menu")
+				WUI.slowPrint("Could not connect to Mainframe: \n")
+				WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+				if WUI.choiceMenu("Switch to Offline Mode?") then
+					WDM.writeSystemData(true, "offline")
+				end
+			end
+		end
+	end
 	WUI.clear("Startup Menu")
-	if tUser then
+	if type(tUser) == "table" then
 		WUI.slowPrint("Logging in...", nil, nil, true)
 		WDM.writeSystemTemp(tUser.uid, "current_uid")
 		WDM.writeSystemTemp(tUser.name, "current_user")
@@ -19,7 +38,9 @@ if t then
 		WDM.writeSystemTemp(tUser.type, "current_type")
 		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 	else
-		WUI.slowPrint("Incorrect User Account ID or Passcode!", nil, nil, true)
+		if not tUser then
+			WUI.slowPrint("Incorrect User Account ID or Passcode!", nil, nil, true)
+		end
 		os.run({}, WDM.getSystemDir("system") .. "startupMenu")
 	end
 else
