@@ -15,18 +15,15 @@ if t then
 	else
 		WNC.send(WDM.readSystemData("mainframe_id"), "connection_request", sUserInput, hash.sha256(sPassInput))
 		local nSenderID, sEvent, p1 = WNC.receive(WDM.readSystemData("mainframe_id"), 10)
-		tUser = p1
-		if sEvent == "connection_failure" then
-			if p1 == "invalid_user" then
-				tUser = nil
-			else
-				WUI.clear("Startup Menu")
-				WUI.slowPrint("Could not connect to Mainframe: \n")
-				WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
-				if WUI.choiceMenu("Switch to Offline Mode?") then
-					WDM.writeSystemData(true, "offline")
-				end
+		if sEvent == "connection_failure" and p1 ~= "invalid_user" then
+			WUI.clear("Startup Menu")
+			WUI.slowPrint("Could not connect to Mainframe: \n")
+			WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+			if WUI.choiceMenu("Switch to Offline Mode?") then
+				WDM.writeSystemData(true, "offline")
 			end
+		else
+			tUser = p1
 		end
 	end
 	WUI.clear("Startup Menu")
@@ -37,12 +34,9 @@ if t then
 		WDM.writeSystemTemp(tUser.hash, "current_hash")
 		WDM.writeSystemTemp(tUser.type, "current_type")
 		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
-	else
-		if not tUser then
+	elseif tUser == "invalid_user" then
 			WUI.slowPrint("Incorrect User Account ID or Passcode!", nil, nil, true)
 		end
-		os.run({}, WDM.getSystemDir("system") .. "startupMenu")
 	end
-else
-	os.run({}, WDM.getSystemDir("system") .. "startupMenu")
 end
+os.run({}, WDM.getSystemDir("system") .. "startupMenu")
