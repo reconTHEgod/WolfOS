@@ -20,17 +20,11 @@ local function decryptData(sData)
 	return nSenderID, nReceiverID, encryption.fromBase64(string.sub(sData, 8))
 end
 
-function send(nReceiverID, sEvent, p1, p2, p3, p4, p5)
-	if not WDM.matchFromTable(sEvent, {"connection_request", "connection_success", "connection_failure", "data_request", "data_success", "data_failure"}) then
-		error("HyperPaw protocol mismatch!", 2)
-	end
+function send(nReceiverID, sEvent, p1, p2, p3, p4, p5) -- connection_request, connection_success, connection_failure, data_request, data_push, data_success, data_failure,
 	rednet.send(nReceiverID, encryptData(nReceiverID, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))
 end
 
 function broadcast(sEvent, p1, p2, p3, p4, p5)
-	if not WDM.matchFromTable(sEvent, {"connection_request", "connection_success", "connection_failure", "data_request", "data_success", "data_failure"}) then
-		error("HyperPaw protocol mismatch!", 2)
-	end
 	rednet.broadcast(encryptData(nil, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))	
 end
 

@@ -4,11 +4,11 @@ Please ask for permission before attempting to redistribute any code relating to
 --WolfOS Data Management Library
 
 local _root = "/WolfOS/"
-local _utils, _progs, _users, _appdata, _system = _root .. "utilities/", _root .. "programs/", _root .. "users/", _root .. "appdata/", _root .. "system/"
+local _utils, _progs, _servs, _users, _appdata, _system = _root .. "utilities/", _root .. "programs/", _root .. "servers/", _root .. "users/", _root .. "appdata/", _root .. "system/"
 local _data = _system .. "data/"
 
-local tSystemDirs = {["root"] = _root, ["utilities"] = _utils, ["programs"] = _progs, ["users"] = _users, ["appdata"] = _appdata, ["system"] = _system, ["data"] = _data}
-local tSystemData, tSystemTemp = {}, {}
+local tSystemDirs = {["root"] = _root, ["utilities"] = _utils, ["programs"] = _progs, ["servers"] = _servs, ["users"] = _users, ["appdata"] = _appdata, ["system"] = _system, ["data"] = _data}
+local tSystemData, tSystemTemp, tServerData = {}, {}, {}
 local _sIteratorDir, _sIteratorItem = "", ""
 
 function sIteratorDir()
@@ -126,29 +126,34 @@ function getSystemDir(sIndex)
 	return tSystemDirs[sIndex]
 end
 
-function readSystemTemp(sIndex)
+function readSystemTemp(sIndex) -- current_uid, current_user, current_hash, current_type,
 	return tSystemTemp[sIndex]
 end
 
-function readSystemData(sIndex)
+function readSystemData(sIndex) -- version, modem_port, modem_state, monitor_port, monitor_state, offline, mainframe_id, relay_id,
 	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	return tSystemData[sIndex]
 end
 
+function readServerData(sIndex) -- mainframe_state, login_state, data_server, data_state, email_server, email_state, im_server, im_state, ...
+	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "server.dat"))) end
+	return tServerData[sIndex]
+end
+
 function writeSystemTemp(sString, sIndex)
-	if sIndex ~= "current_uid" and sIndex ~= "current_user" and sIndex ~= "current_hash" and sIndex ~= "current_type" then
-		error("Attempt to write to unknown index!", 2)
-	end
 	tSystemTemp[sIndex] = sString
 end
 
 function writeSystemData(sString, sIndex)
-	if sIndex ~= "version" and sIndex ~= "modem_port" and sIndex ~= "modem_state" and sIndex ~= "monitor_port" and sIndex ~= "monitor_state" and sIndex ~= "offline" and sIndex ~= "mainframe_id" and sIndex ~= "relay_id" then
-		error("Attempt to write to unknown index!", 2)
-	end
 	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	tSystemData[sIndex] = sString
 	fWrite(tSystemDirs.data .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
+end
+
+function writeServerData(sString, sIndex)
+	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "server.dat"))) end
+	tServerData[sIndex] = sString
+	fWrite(tSystemDirs.data .. "server.dat", encryption.toBase64(textutils.serialize(tServerData)))
 end
 
 function list(sDir)

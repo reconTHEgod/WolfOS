@@ -6,9 +6,9 @@ if not os.getComputerLabel() then
 end
 print("Loading APIs...")
 sleep(0.01)
-local tAPIS = fs.list("/WolfOS/system/apis")
-for n = 1, #tAPIS do
-	os.loadAPI("/WolfOS/system/apis/" .. tAPIS[n])
+for _, sAPI in ipairs(fs.list("/WolfOS/system/apis")) do
+	os.loadAPI("/WolfOS/system/apis/" .. sAPI)
+	print("API loaded: " .. sAPI)
 end
 local sModemPort = WDM.readSystemData("modem_port")
 if sModemPort then
@@ -17,6 +17,21 @@ if sModemPort then
 	elseif WDM.readSystemData("modem_state") and WPH.getType(sModemPort) == "modem" then
 		print("Initiating modem...")
 		rednet.open(sModemPort)
+	end
+end
+local tServers = {}
+if WDM.readServerData("mainframe_state") then
+	print("Initiating mainframe...")
+	local loadServer = function(sType)
+		if WDM.readServerData(sType .. "_state") then
+			return function() os.run({}, WDM.getSystemDir("servers") .. sType) end
+		end
+	end
+	for _, sServer in ipairs(fs.list(WDM.getSystemDir("servers"))) do
+		if not fs.isDir(WDM.getSystemDir("servers") .. sServer) then
+			tServers[#tServers + 1] = loadServer(sServer)
+			print("Server loaded: " .. sServer)
+		end
 	end
 end
 local sMonitorPort = WDM.readSystemData("monitor_port")
@@ -38,4 +53,4 @@ local runOS = function()
 	os.run({}, WDM.getSystemDir("system") .. "startupMenu")
 end
 local runClock = WUI.setupClock()
-parallel.waitForAny(runOS, runClock)
+parallel.waitForAny(runOS, runClock, unpack(tServers))

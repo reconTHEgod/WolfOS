@@ -1,0 +1,20 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--WolfOS User Server Module
+
+while true do
+	if WDM.readServerData("user_state") then
+		local nSenderID, sEvent, p1, p2, p3, p4, p5 = WNC.receive()
+		if sEvent == "connection_request" then
+			local tUser = WAU.checkLogin(p1, p2)
+			if tUser then
+				WNC.send(nSenderID, "connection_success", tUser)
+			else
+				WNC.send(nSenderID, "connection_failure", "invalid_user")
+			end
+		end
+	else
+		sleep(1)
+	end
+end
