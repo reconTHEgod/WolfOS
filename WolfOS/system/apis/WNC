@@ -17,7 +17,7 @@ local function decryptData(sData)
 	local sRouteHeader = string.sub(sData, 1, 7)
 	local nSenderID = tonumber(string.sub(sRouteHeader, 1, 3))
 	local nReceiverID = tonumber(string.sub(sRouteHeader, 5, 7)) or nil
-	return nSenderID, nReceiverID, encryption.fromBase64(string.sub(sData, 8))
+	return nSenderID, nReceiverID, encryption.fromBase64(string.sub(sData, 9))
 end
 
 function send(nReceiverID, sEvent, p1, p2, p3, p4, p5) -- connection_request, connection_success, connection_failure, data_request, data_push, data_success, data_failure,
