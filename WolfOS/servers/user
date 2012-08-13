@@ -13,6 +13,16 @@ while true do
 			else
 				WNC.send(nSenderID, "connection_failure", "invalid_user")
 			end
+		elseif sEvent == "data_request" then
+			if p1 == "user_list" then
+				if WAU.exists(p2)["type"] == "admin" then
+					WNC.send(nSenderID, "data_success", textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat"))))
+				else
+					WNC.send(nSenderID, "data_failure", "unauthorised_user")
+				end
+			elseif p1 == "user_data" then
+				WNC.send(nSenderID, "data_success", WAU.exists(p2))
+			end
 		end
 	else
 		sleep(1)

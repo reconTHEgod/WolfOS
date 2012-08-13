@@ -3,7 +3,23 @@ Please ask for permission before attempting to redistribute any code relating to
 
 local editUser = function(sUser)
 	while true do
-		local tUser = WAU.exists(nil, sUser)
+		local tUser = {}
+		if not WDM.readSystemData("offline") and not WDM.readServerData("mainframe_state") then
+			WNC.send(WDM.readSystemData("mainframe_id"), "data_request", "user_data", sUser, WDM.readSystemTemp("current_uid"))
+			local nSenderID, sEvent, p1 = WNC.receive(WDM.readSystemData("mainframe_id"), 10)
+			if sEvent == "connection_failure" then
+				WUI.clear("Startup Menu")
+				WUI.slowPrint("Could not retrieve data: \n")
+				WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+				WUI.slowPrint("Press any key to continue...")
+				os.pullEvent("key") 
+				break
+			else
+				tUser = p1
+			end
+		else
+			tUser = WAU.exists(sUser)
+		end
 		if tUser then
 			tChoices = {"\\Unique ID: " .. tUser.uid, "\\User Account ID: " .. tUser.name, "\\User Account Type: " .. string.upper(string.sub(tUser.type, 1, 1)) .. string.sub(tUser.type, 2), "\\", "Change User Account ID", "Change Passcode", "Change User Account Type", "Delete User Account"}
 			tActions = {
@@ -50,7 +66,7 @@ local editUser = function(sUser)
 								if #sNewPass < 8 then
 									WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
 								else
-									WAU.changeUserData(tUser.uid, "pass", sNewPass)
+									WAU.changeUserData(tUser.uid, "pass", hash.sha256(sNewPass))
 									WUI.clear("Control Panel")
 									WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
 									break
@@ -122,10 +138,10 @@ repeat
 			["System Information"] = function()
 				local sMonitorPort = WDM.readSystemData("monitor_port") or ""
 				local sModemPort = WDM.readSystemData("modem_port") or ""
-				local sOffline = WDM.readSystemData("offline")
-				local sMainframeID = WDM.readSystemData("mainframe_id")
-				local sRelayID = WDM.readSystemData("relay_id")
-				if sOffline then sMainframeID = "OFFLINE" sRelayID = "OFFLINE" end
+				local sMainframeID = WDM.readSystemData("mainframe_id") or ""
+				local sRelayID = WDM.readSystemData("relay_id") or ""
+				if WDM.readSystemData("offline") then sMainframeID = "OFFLINE" sRelayID = "OFFLINE"
+				elseif WDM.readServerData("mainframe_state") then sMainframeID = "N/A" end
 				local sSelection = nil
 				repeat
 					tChoices = {
@@ -198,8 +214,8 @@ repeat
 							if #sNewPass < 8 then
 								WUI.slowPrint("Passcodes must be between 8 and 16 characters! \n")
 							else
-								WAU.changeUserData(WDM.readSystemTemp("current_uid"), "pass", sNewPass)
-								WDM.writeSystemTemp(WAU.encryptPasscode(sNewPass), "current_hash")
+								WAU.changeUserData(WDM.readSystemTemp("current_uid"), "pass", hash.sha256(sNewPass))
+								WDM.writeSystemTemp(hash.sha256(sNewPass), "current_hash")
 								WUI.clear("Control Panel")
 								WUI.slowPrint("Passcode changed successfully!", nil, nil, true)
 								break
@@ -213,27 +229,47 @@ repeat
 			["Edit User Account"] = function()
 				while true do
 					tChoices = {}
-					local tAll = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
-					local tAdmins, tUsers = {}, {}
-					for nUser, tUser in ipairs(tAll) do
-						if tUser.type == "admin" then
-							tAdmins[#tAdmins + 1] = tUser.name
+					local tAll = {}
+					if not WDM.readSystemData("offline") and not WDM.readServerData("mainframe_state") then
+						WNC.send(WDM.readSystemData("mainframe_id"), "data_request", "user_list", WDM.readSystemTemp("current_uid"))
+						local nSenderID, sEvent, p1 = WNC.receive(WDM.readSystemData("mainframe_id"), 10)
+						if sEvent == "connection_failure" then
+							WUI.clear("Startup Menu")
+							WUI.slowPrint("Could not retrieve data: \n")
+							WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+							WUI.slowPrint("Press any key to continue...")
+							os.pullEvent("key") 
+							break
 						else
-							tUsers[#tUsers + 1] = tUser.name
+							tAll = p1
 						end
-					end
-					for n = 1, #tAdmins do
-						table.insert(tChoices, tAdmins[n])
-					end
-					if #tAdmins > 0 and #tUsers > 0 then table.insert(tChoices, "\\") end
-					for n = 1, #tUsers do
-						table.insert(tChoices, tUsers[n])
-					end
-					local sSelection = WUI.menu(tChoices, "User Accounts:", "Control Panel", true)
-					if sSelection == "Return" then 
-						break
 					else
-						editUser(sSelection)
+						tAll = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
+					end
+					if #tAll > 0 then
+						local tAdmins, tUsers = {}, {}
+						for nUser, tUser in ipairs(tAll) do
+							if tUser.type == "admin" then
+								tAdmins[#tAdmins + 1] = tUser.name
+							else
+								tUsers[#tUsers + 1] = tUser.name
+							end
+						end
+						for n = 1, #tAdmins do
+							table.insert(tChoices, tAdmins[n])
+						end
+						if #tAdmins > 0 and #tUsers > 0 then table.insert(tChoices, "\\") end
+						for n = 1, #tUsers do
+							table.insert(tChoices, tUsers[n])
+						end
+						local sSelection = WUI.menu(tChoices, "User Accounts:", "Control Panel", true)
+						if sSelection == "Return" then 
+							break
+						else
+							editUser(sSelection)
+						end
+					else
+						break
 					end
 				end
 			end,
@@ -250,7 +286,7 @@ repeat
 					if t then
 						sNewUser, sNewPass = t[1], t[2]
 						if #sNewUser > 0 and not WAU.exists(nil, sNewUser) and #sNewPass > 7 then
-							WAU.createUser(sNewUser, sNewPass)
+							WAU.createUser(sNewUser, hash.sha256(sNewPass))
 							WUI.clear("Control Panel")
 							WUI.slowPrint("User Account created successfully!", nil, nil, true)
 							break
@@ -279,7 +315,7 @@ repeat
 		tActions = {
 			["Modem Settings"] = function() nMenuNum = 4 end,
 			["Monitor Settings"] = function() nMenuNum = 5 end,
-			["Network Settings"] = function() nMenuNum = 6 end,
+			["Network Settings"] = function() WDM.writeSystemData(false, "offline") end,
 			["Update WolfOS"] = function()
 				local sUrl = "http://pastebin.com/raw.php?i=20pSe6n3"
 				local sLatestVersion = nil

@@ -20,7 +20,7 @@ if sModemPort then
 	end
 end
 local tServers = {}
-if WDM.readServerData("mainframe_state") then
+if WDM.readServerData("mainframe_state") and not WDM.readSystemData("offline") then
 	print("Initiating mainframe...")
 	local loadServer = function(sType)
 		if WDM.readServerData(sType .. "_state") then
