@@ -19,19 +19,19 @@ function generateUID()
 	return sUID
 end
 
-function exists(sUID, sUser)
+function exists(sUser)
 	if #tUsers == 0 then tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat"))) end
 	for nUser, tUser in ipairs(tUsers) do
-		if sUID == tUser.uid or sUser == tUser.name then
+		if sUser == tUser.uid or sUser == tUser.name then
 			return tUser, nUser
 		end
 	end
 	return nil
 end
 
-function createUser(sUser, sHash)
+function createUser(sName, sHash)
 	local sUID = generateUID()
-	tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sUser, ["hash"] = sHash, ["type"] = "user"}
+	tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sName, ["hash"] = sHash, ["type"] = "user"}
 	WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 	fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
 end
@@ -54,10 +54,10 @@ function changeUserData(sUID, sIndex, sString)
 	end
 end
 
-function checkLogin(sUser, sHash)
-	local tUser = exists(nil, sUser)
+function checkLogin(sName, sHash)
+	local tUser = exists(sName)
 	if tUser then
-		if sUser == tUser.name and sHash == tUser.hash then
+		if sName == tUser.name and sHash == tUser.hash then
 			return tUser
 		end
 	end

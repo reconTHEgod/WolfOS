@@ -135,7 +135,7 @@ function readSystemData(sIndex) -- version, modem_port, modem_state, monitor_por
 	return tSystemData[sIndex]
 end
 
-function readServerData(sIndex) -- mainframe_state, login_state, data_server, data_state, email_server, email_state, im_server, im_state, ...
+function readServerData(sIndex) -- mainframe_state, user_server, user_state, data_server, data_state, email_server, email_state, im_server, im_state, ...
 	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "server.dat"))) end
 	return tServerData[sIndex]
 end
