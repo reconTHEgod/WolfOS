@@ -178,6 +178,7 @@ function shutdown()
 	end
 	bootScreen("Shutting down WolfOS", "Please wait...")
 	os.shutdown()
+	sleep(0.5) -- Circumvents screen flashing before shutdown
 end
 
 function reboot()
@@ -186,6 +187,7 @@ function reboot()
 	end
 	bootScreen("Rebooting WolfOS", "Please wait...")
 	os.reboot()
+	sleep(0.5) -- Circumvents screen flashing before reboot
 end
 
 function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)

@@ -56,7 +56,9 @@ end
 function readAllText(sPath)
 	if exists(sPath) then
 		local hFile = io.open(sPath, "r")
-		return hFile:read("*a")
+		local sText = hFile:read("*a")
+		hFile:close()
+		return sText
 	end
 	return ""
 end
