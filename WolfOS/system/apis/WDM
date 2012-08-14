@@ -177,6 +177,17 @@ function list(sDir)
 	return tDirs, tFiles
 end
 
+function mergeTables(tTable1, tTable2)
+	for k, v in pairs(tTable2) do
+		if type(k) == "number" then
+			tTable1[#tTable1 + 1] = v
+		else
+			tTable1[k] = v
+		end
+	end
+	return tTable1
+end
+
 function matchFromTable(sString, tTable, nStartPos, bPartial)
 	local nStartPos = nStartPos or 1
 	local bPartial = bPartial or false
