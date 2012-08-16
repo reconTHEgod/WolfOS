@@ -20,28 +20,43 @@ function generateUID()
 end
 
 function exists(sUser)
-	if #tUsers == 0 then tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat"))) end
-	for nUser, tUser in ipairs(tUsers) do
-		if sUser == tUser.uid or sUser == tUser.name then
-			return tUser, nUser
+	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+		WNC.send(WDM.readSystemData("server_id"), "data_request", "user_list")
+		_, _, _, tUsers = WNC.receive(WDM.readSystemData("server_id"), 5)
+	elseif #tUsers == 0 then
+		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("system_data") .. "users.dat")))
+	end
+	if type(tUsers) == "table" then
+		for nUser, tUser in ipairs(tUsers) do
+			if sUser == tUser.uid or sUser == tUser.name then
+				return tUser, nUser
+			end
 		end
 	end
 	return nil
 end
 
 function createUser(sName, sHash)
-	local sUID = generateUID()
-	tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sName, ["hash"] = sHash, ["type"] = "user"}
-	WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
-	fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
+	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+		WNC.send(WDM.readSystemData("server_id"), "data_push", "new_user", sName, sHash)
+	else
+		local sUID = generateUID()
+		tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sName, ["hash"] = sHash, ["type"] = "user"}
+		WDM.fWrite(WDM.getSystemDir("system_data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+		fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
+	end
 end
 
 function removeUser(sUID)
-	local tUser, nUser = exists(sUID)
-	if tUser then
-		tUsers[nUser] = nil
-		WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
-		fs.delete(WDM.getSystemDir("users") .. sUID .. "/")
+	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+		WNC.send(WDM.readSystemData("server_id"), "data_push", "remove_user", sUID)
+	else
+		local tUser, nUser = exists(sUID)
+		if tUser then
+			tUsers[nUser] = nil
+			WDM.fWrite(WDM.getSystemDir("system_data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+			fs.delete(WDM.getSystemDir("users") .. sUID .. "/")
+		end
 	end
 end
 
@@ -55,11 +70,23 @@ function changeUserData(sUID, sIndex, sString)
 end
 
 function checkLogin(sName, sHash)
-	local tUser = exists(sName)
+	local tUser
+	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+		WNC.send(WDM.readSystemData("server_id"), "connection_request", sName, sHash)
+		local nSenderID, _, sEvent, p1 = WNC.receive(WDM.readSystemData("server_id"), 5)
+		if sEvent ~= "connection_success" then
+			return nil, sEvent, p1
+		end
+		WDM.writeSystemTemp(false, "local_user")
+		tUser = p1
+	else
+		WDM.writeSystemTemp(true, "local_user")
+		tUser = exists(sName)
+	end
 	if tUser then
 		if sName == tUser.name and sHash == tUser.hash then
-			return tUser
+			return tUser, nil, nil
 		end
 	end
-	return nil
+	return nil, nil, "invalid_user"
 end

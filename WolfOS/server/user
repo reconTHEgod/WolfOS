@@ -1,0 +1,37 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--WolfOS User Server Module
+
+while true do
+	if WDM.readServerData("server_state") and WDM.readServerData("user_state") then
+		local nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5 = WNC.receive()
+		if sEvent == "connection_request" then
+			local tUser = WAU.checkLogin(p1, p2)
+			if tUser then
+				WNC.send(nSenderID, "connection_success", tUser)
+			else
+				WNC.send(nSenderID, "connection_failure", "invalid_user")
+			end
+		elseif sEvent == "data_request" then
+			if p1 == "user_list" then
+				WNC.send(nSenderID, "data_success", textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("system_data") .. "users.dat"))))
+			elseif p1 == "user_data" then
+				local tUser, nUser = WAU.exists(p2)
+				if tUser then
+					WNC.send(nSenderID, "data_success", tUser, nUser)
+				else
+					WNC.send(nSender, "data_failure", "invalid_user")
+				end
+			end
+		elseif sEvent == "data_push" then
+			if p1 == "new_user" then
+				WAU.createUser(p2, p3)
+			elseif p1 == "remove_user" then
+				WAU.removeUser(p2)
+			end
+		end
+	else
+		sleep(1)
+	end
+end

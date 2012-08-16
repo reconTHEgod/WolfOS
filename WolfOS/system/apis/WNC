@@ -3,6 +3,8 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS Network Communication (HyperPaw)
 
+local tMonitor = {}
+
 local function encryptData(nReceiverID, sMessage)
 	local sSenderID = string.rep("0", 3 - string.len(tostring(os.getComputerID()))) .. os.getComputerID()
 	local sReceiverID = "---"
@@ -20,27 +22,54 @@ local function decryptData(sData)
 	return nSenderID, nReceiverID, encryption.fromBase64(string.sub(sData, 9))
 end
 
-function send(nReceiverID, sEvent, p1, p2, p3, p4, p5) -- connection_request, connection_success, connection_failure, data_request, data_push, data_success, data_failure,
+function monitor()
+	local t = tMonitor
+	tMonitor = {}
+	return t
+end
+
+function send(nReceiverID, sEvent, p1, p2, p3, p4, p5) -- connection_request, connection_success, connection_failure, data_request, data_push, data_success, data_failure, discovery_request, discovery_response, discovery_success, discovery_failure,
 	rednet.send(nReceiverID, encryptData(nReceiverID, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))
 end
 
 function broadcast(sEvent, p1, p2, p3, p4, p5)
-	rednet.broadcast(encryptData(nil, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))	
+	rednet.broadcast(encryptData(nil, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))
 end
 
 function receive(nSenderFilter, nTimeout)
 	local timer = nil
 	if nTimeout then timer = os.startTimer(nTimeout) end
 	while true do
-		local _event, p1, p2 = os.pullEvent()
+		local _event, p1, p2, nDistance = os.pullEvent()
 		if _event == "rednet_message" then
 			local nSenderID, nReceiverID, sMessage = decryptData(p2)
 			if (nReceiverID == os.getComputerID() or not nReceiverID) and (nSenderFilter == nSenderID or not nSenderFilter) then
 				local sEvent, p1, p2, p3, p4, p5 = unpack(textutils.unserialize(sMessage))
-				return nSenderID, sEvent, p1, p2, p3, p4, p5
+				return nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5
 			end
 		elseif _event == "timer" and p1 == timer then
-			return nil, "connection_failure", "timeout"
+			return nil, nil, "connection_failure", "timeout"
 		end
 	end
+end
+
+function discover(sType, nTimeout)
+	local timer = os.startTimer((nTimeout or 5))
+	local tDiscoveries = {}
+	local sEvent, p1 = parallel.waitForAny(function()
+		while true do
+			local _event, p1 = os.pullEvent("timer")
+			if p1 == timer then return "discovery_failure", "timeout" end
+		end
+	end,
+	function()
+		while true do
+			broadcast("discovery_request", sType)
+			local nSenderID, nDistance, sEvent = receive()
+			if sEvent == "discovery_response" then
+				tDiscoveries[#tDiscoveries + 1] = {nSenderID, nDistance}
+			end
+		end
+	end)
+	return tDiscoveries
 end
