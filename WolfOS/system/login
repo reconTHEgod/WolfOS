@@ -20,7 +20,7 @@ if t then
 		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 	elseif p2 ~= "invalid_user" then
 		WUI.clear("Startup Menu")
-		WUI.slowPrint("Could not connect to Mainframe: \n")
+		WUI.slowPrint("Could not connect to Server: \n")
 		WUI.slowPrint("> " .. p1 .. ": " .. p2 .. "\n")
 		if WUI.choiceMenu("Switch to Offline Mode?") then
 			WDM.writeSystemData(true, "offline")
