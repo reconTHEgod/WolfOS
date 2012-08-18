@@ -4,18 +4,18 @@ Please ask for permission before attempting to redistribute any code relating to
 local editUser = function(sUser)
 	while true do
 		local tUser = {}
-		if not WDM.readSystemData("offline") and not WDM.readServerData("mainframe_state") then
-			WNC.send(WDM.readSystemData("mainframe_id"), "data_request", "user_data", sUser, WDM.readSystemTemp("current_uid"))
-			local nSenderID, sEvent, p1 = WNC.receive(WDM.readSystemData("mainframe_id"), 10)
-			if sEvent == "connection_failure" then
-				WUI.clear("Startup Menu")
+		if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+			WNC.send(WDM.readSystemData("server_id"), "data_request", "user_data", sUser, WDM.readSystemTemp("current_uid"))
+			local nSenderID, _, sEvent, p1 = WNC.receive(WDM.readSystemData("server_id"), 10)
+			if type(p1) == "table" then
+				tUser = p1
+			else
+				WUI.clear("Control Panel")
 				WUI.slowPrint("Could not retrieve data: \n")
 				WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
 				WUI.slowPrint("Press any key to continue...")
 				os.pullEvent("key") 
 				break
-			else
-				tUser = p1
 			end
 		else
 			tUser = WAU.exists(sUser)
@@ -138,10 +138,10 @@ repeat
 			["System Information"] = function()
 				local sMonitorPort = WDM.readSystemData("monitor_port") or ""
 				local sModemPort = WDM.readSystemData("modem_port") or ""
-				local sMainframeID = WDM.readSystemData("mainframe_id") or ""
+				local sServerID = WDM.readSystemData("server_id") or ""
 				local sRelayID = WDM.readSystemData("relay_id") or ""
-				if WDM.readSystemData("offline") then sMainframeID = "OFFLINE" sRelayID = "OFFLINE"
-				elseif WDM.readServerData("mainframe_state") then sMainframeID = "N/A" end
+				if WDM.readSystemData("offline") then sServerID = "OFFLINE" sRelayID = "OFFLINE"
+				elseif WDM.readServerData("server_state") then sServerID = "N/A" end
 				local sSelection = nil
 				repeat
 					tChoices = {
@@ -152,7 +152,7 @@ repeat
 						"\\Monitor Port: " .. string.upper(string.sub(sMonitorPort, 1, 1)) .. string.sub(sMonitorPort, 2),
 						"\\Modem Port: " .. string.upper(string.sub(sModemPort, 1, 1)) .. string.sub(sModemPort, 2),
 						"\\",
-						"\\Mainframe ID#: " .. sMainframeID,
+						"\\Server ID#: " .. sServerID,
 						"\\Relay ID#: " .. sRelayID,
 						"\\",
 						"\\WolfOS created by 'toxicwolf'",
@@ -230,9 +230,9 @@ repeat
 				while true do
 					tChoices = {}
 					local tAll = {}
-					if not WDM.readSystemData("offline") and not WDM.readServerData("mainframe_state") then
-						WNC.send(WDM.readSystemData("mainframe_id"), "data_request", "user_list", WDM.readSystemTemp("current_uid"))
-						local nSenderID, sEvent, p1 = WNC.receive(WDM.readSystemData("mainframe_id"), 10)
+					if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+						WNC.send(WDM.readSystemData("server_id"), "data_request", "user_list", WDM.readSystemTemp("current_uid"))
+						local nSenderID, _, sEvent, p1 = WNC.receive(WDM.readSystemData("server_id"), 10)
 						if sEvent == "connection_failure" then
 							WUI.clear("Startup Menu")
 							WUI.slowPrint("Could not retrieve data: \n")
@@ -244,7 +244,7 @@ repeat
 							tAll = p1
 						end
 					else
-						tAll = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
+						tAll = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("system_data") .. "users.dat")))
 					end
 					if #tAll > 0 then
 						local tAdmins, tUsers = {}, {}
@@ -315,7 +315,7 @@ repeat
 		tActions = {
 			["Modem Settings"] = function() nMenuNum = 4 end,
 			["Monitor Settings"] = function() nMenuNum = 5 end,
-			["Network Settings"] = function() WDM.writeSystemData(false, "offline") end,
+			["Network Settings"] = function() nMenuNum = 6 end,
 			["Update WolfOS"] = function()
 				local sUrl = "http://pastebin.com/raw.php?i=20pSe6n3"
 				local sLatestVersion = nil
@@ -442,5 +442,144 @@ repeat
 		}
 		local sSelection = WUI.menu(tChoices, "Monitor Settings", "Control Panel", true)
 		tActions[sSelection]()
+	elseif nMenuNum == 6 then
+		local bOffline = WDM.readSystemData("offline")
+		local sOffline = "Turn off offline mode"
+		if not bOffline then sOffline = "Turn on offline mode" end
+		tChoices = {"@" .. sOffline}
+		if not bOffline then
+			tChoices[#tChoices + 1] = "@\\"
+			if WDM.readServerData("server_state") then
+				tChoices = WDM.mergeTables(tChoices, {"@Server Settings", "@\\"})
+			else
+				tChoices = WDM.mergeTables(tChoices, {"@Start Server", "@\\", "@Connect to Server"})
+			end
+			tChoices = WDM.mergeTables(tChoices, {"@Connect to Relay", "Test Connections", "@\\", "@Network Monitor"})
+		end
+		tActions = {
+			[sOffline] = function()
+				if bOffline then
+					WDM.writeSystemData(false, "offline")
+					WUI.clear("Control Panel")
+					WUI.slowPrint("Offline mode turned off.", nil, nil, true)
+				else
+					WDM.writeSystemData(true, "offline")
+					WUI.clear("Control Panel")
+					WUI.slowPrint("Offline mode turned on.", nil, nil, true)
+				end
+			end,
+			["Server Settings"] = function() nMenuNum = 7 end,
+			["Start Server"] = function()
+				WUI.clear("Control Panel")
+				WUI.slowPrint("Starting Server...", nil, nil, true)
+				WDM.writeServerData(true, "server_state")
+				if not WDM.readSystemTemp("local_user") then WUI.logout() end
+			end,
+			["Connect to Server"] = function()
+				tChoices = {"Enter Server ID#"}
+				local tServers = WNC.discover("server", 5)
+				if #tServers > 0 then
+					tChoices[#tChoices + 1] = "\\"
+					for k, v in pairs(tServers) do
+						tChoices[#tChoices + 1] = "ID#: " .. k .. ", Distance: " .. v
+					end
+				end
+				tChoices = WDM.mergeTables(tChoices, {"\\", })
+				local sSelection = WUI.menu(tChoices, "Server Selection", "Control Panel", true)
+				WUI.clear("Control Panel")
+				if sSelection == "Enter Server ID#" then
+					WUI.slowPrint("Enter Server ID#: \n")
+					WUI.registerTextField(nil, "%d")
+					local t = WUI.getText()
+					if t then
+						WUI.clear("Control Panel")
+						WUI.slowPrint("Connecting to Server...", nil, nil, true)
+						WNC.send(t[1], "connection_request", "client_connection")
+						local nSenderID, _, sEvent, p1 = WNC.receive(t[1], 5)
+						WUI.clear("Control Panel")
+						if sEvent == "connection_success" then
+							WDM.writeSystemData(t[1], "server_id")
+							WUI.slowPrint("Connected to Server. Log out to apply changes.", nil, nil, true)
+						elseif sEvent == "connection_failure" then
+							WUI.slowPrint("Could not connect to Server: \n")
+							WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+							WUI.slowPrint("Press any key to continue...")
+							os.pullEvent("key") 
+						end
+					end
+				elseif sSelection ~= "Return" then
+					local nServerID = string.sub(sSelection, 6, string.find(sSelection, ",") - 1)
+					WUI.slowPrint("Connecting to Server...", nil, nil, true)
+					WNC.send(nServerID, "connection_request", "client_connection")
+					local nSenderID, _, sEvent, p1 = WNC.receive(nServerID, 5)
+					WUI.clear("Control Panel")
+					if sEvent == "connection_success" then
+						WDM.writeSystemData(nServerID, "server_id")
+						WUI.slowPrint("Connected to Server. Log out to apply changes.", nil, nil, true)
+					elseif sEvent == "connection_failure" then
+						WUI.slowPrint("Could not connect to Server: \n")
+						WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+						WUI.slowPrint("Press any key to continue...")
+						os.pullEvent("key") 
+					end
+				end
+			end,
+			["Connect to Relay"] = function()
+			
+			end,
+			["Test Connections"] = function()
+				WUI.clear("Control Panel")
+				WUI.slowPrint("Testing Connections... \n", nil, nil, true)
+				WUI.clear("Control Panel")
+				local nServerID = WDM.readSystemData("server_id")
+				if nServerID then
+					WNC.send(nServerID, "connection_request", "test_connection")
+					local nSenderID, _, sEvent, p1 = WNC.receive(nServerID, 5)
+					if sEvent == "connection_response" then
+						WUI.slowPrint("Server connection OK.", nil, nil, true)
+					else
+						WUI.slowPrint("Could not connect to Server: \n")
+						WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+						WUI.slowPrint("Press any key to continue...")
+						os.pullEvent("key") 
+					end
+				end
+			end,
+			["Return"] = function() nMenuNum = 3 end
+		}
+		local sSelection = WUI.menu(tChoices, "Network Settings", "Control Panel", true)
+		tActions[sSelection]()
+	elseif nMenuNum == 7 then
+		tChoices = {"Stop Server", "\\"}
+		for k, v in pairs(WDM.readServerTemp()) do
+			if v == true then
+				local sModule = string.sub(k, 1, string.find(k, "_") - 1)
+				if WDM.readServerData(sModule .. "_state") then
+					tChoices[#tChoices + 1] = string.upper(string.sub(sModule, 1, 1)) .. string.sub(sModule, 2) .. " Module: ON"
+				else
+					tChoices[#tChoices + 1] = string.upper(string.sub(sModule, 1, 1)) .. string.sub(sModule, 2) .. " Module: OFF"
+				end
+			end
+		end
+		tActions = {
+			["Stop Server"] = function()
+				WUI.clear("Control Panel")
+				WUI.slowPrint("Stopping Server...", nil, nil, true)
+				WDM.writeServerData(false, "server_state")
+				nMenuNum = 6
+			end,
+			["Return"] = function() nMenuNum = 6 end
+		}
+		local sSelection = WUI.menu(tChoices, "Server Settings", "Control Panel", true)
+		if tActions[sSelection] then
+			tActions[sSelection]()
+		else
+			local sModule = string.lower(string.sub(sSelection, 1, string.find(sSelection, "%s") - 1))
+			if WDM.readServerData(sModule .. "_state") then
+				WDM.writeServerData(false, sModule .. "_state")
+			else
+				WDM.writeServerData(true, sModule .. "_state")
+			end
+		end
 	end
 until bMenuLoop == false

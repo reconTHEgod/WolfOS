@@ -61,18 +61,22 @@ function removeUser(sUID)
 end
 
 function changeUserData(sUID, sIndex, sString)
-	local tUser, nUser = exists(sUID)
-	if tUser then
-		tUser[sIndex] = sString
-		tUsers[nUser] = tUser
-		WDM.fWrite(WDM.getSystemDir("users") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+		WNC.send(WDM.readSystemData("server_id"), "data_push", "update_user", sUID, sIndex, sString)
+	else
+		local tUser, nUser = exists(sUID)
+		if tUser then
+			tUser[sIndex] = sString
+			tUsers[nUser] = tUser
+			WDM.fWrite(WDM.getSystemDir("users") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+		end
 	end
 end
 
 function checkLogin(sName, sHash)
 	local tUser
 	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
-		WNC.send(WDM.readSystemData("server_id"), "connection_request", sName, sHash)
+		WNC.send(WDM.readSystemData("server_id"), "connection_request", "user_connection", sName, sHash)
 		local nSenderID, _, sEvent, p1 = WNC.receive(WDM.readSystemData("server_id"), 5)
 		if sEvent ~= "connection_success" then
 			return nil, sEvent, p1

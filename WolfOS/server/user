@@ -4,10 +4,10 @@ Please ask for permission before attempting to redistribute any code relating to
 --WolfOS User Server Module
 
 while true do
-	if WDM.readServerData("server_state") and WDM.readServerData("user_state") then
+	if not WDM.readSystemData("offline") and WDM.readServerData("server_state") and WDM.readServerData("user_state") then
 		local nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5 = WNC.receive()
-		if sEvent == "connection_request" then
-			local tUser = WAU.checkLogin(p1, p2)
+		if sEvent == "connection_request" and p1 == "user_connection" then
+			local tUser = WAU.checkLogin(p2, p4)
 			if tUser then
 				WNC.send(nSenderID, "connection_success", tUser)
 			else
@@ -29,6 +29,8 @@ while true do
 				WAU.createUser(p2, p3)
 			elseif p1 == "remove_user" then
 				WAU.removeUser(p2)
+			elseif p1 == "update_user" then
+				WAU.changeUserData(p2, p3, p4)
 			end
 		end
 	else
