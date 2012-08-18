@@ -5,7 +5,7 @@ Please ask for permission before attempting to redistribute any code relating to
 
 while true do
 	if not WDM.readSystemData("offline") and WDM.readServerData("server_state") and WDM.readServerData("user_state") then
-		local nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5 = WNC.receive()
+		local nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5 = WNC.receive(nil, 1)
 		if sEvent == "connection_request" and p1 == "user_connection" then
 			local tUser = WAU.checkLogin(p2, p3)
 			if tUser then

@@ -213,7 +213,7 @@ function matchFromTable(sString, tTable, nStartPos, bPartial)
 	local bPartial = bPartial or false
 	for n = nStartPos, #tTable do
 		local nStart, nEnd = string.find(tTable[n], sString)
-		if nStart == 1 and nEnd == #tTable[n] or bPartial == true and nStart then
+		if nStart == 1 and nEnd == string.len(tTable[n]) or bPartial == true and nStart then
 			return true, n
 		end
 	end

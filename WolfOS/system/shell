@@ -54,11 +54,7 @@ local runCoreModule = function()
 	while true do
 		local nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5 = WNC.receive()
 		if not WDM.readSystemData("offline") then
-			if sEvent == "discovery_request" then
-				if (p1 == "server" and WDM.readServerData("server_state")) or (p1 == "client" and not WDM.readServerData("server_state")) then
-					WNC.send(nSenderID, "discovery_response")
-				end
-			elseif sEvent == "connection_request" then
+			if sEvent == "connection_request" then
 				if p1 == "client_connection" and WDM.readServerData("server_state") then
 					WNC.send(nSenderID, "connection_success")
 				elseif p1 == "test_connection" then
