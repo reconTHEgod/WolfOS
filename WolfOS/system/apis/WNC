@@ -20,7 +20,7 @@ local function decryptData(sData)
 	return nSenderID, nReceiverID, encryption.fromBase64(string.sub(sData, 9))
 end
 
-function send(nReceiverID, sEvent, p1, p2, p3, p4, p5) -- connection_request, connection_success, connection_failure, data_request, data_push, data_success, data_failure, discovery_request, discovery_response, discovery_success, discovery_failure,
+function send(nReceiverID, sEvent, p1, p2, p3, p4, p5) -- connection_request, connection_response, connection_success, connection_failure, data_request, data_push, data_success, data_failure, discovery_request, discovery_response, discovery_success, discovery_failure,
 	rednet.send(nReceiverID, encryptData(nReceiverID, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))
 end
 
@@ -59,7 +59,7 @@ function discover(sType, nTimeout)
 			broadcast("discovery_request", sType)
 			local nSenderID, nDistance, sEvent = receive()
 			if sEvent == "discovery_response" then
-				tDiscoveries[#tDiscoveries + 1] = {nSenderID, nDistance}
+				tDiscoveries[tostring(nSenderID)] = nDistance
 			end
 		end
 	end)
