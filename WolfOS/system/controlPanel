@@ -454,7 +454,7 @@ repeat
 			else
 				tChoices = WDM.mergeTables(tChoices, {"@Start Server", "@\\", "@Connect to Server"})
 			end
-			tChoices = WDM.mergeTables(tChoices, {"@Connect to Relay", "Test Connections", "@\\", "@Network Monitor"})
+			tChoices = WDM.mergeTables(tChoices, {"@Connect to Relay", "Test Connections"})
 		end
 		tActions = {
 			[sOffline] = function()
@@ -476,38 +476,12 @@ repeat
 				if not WDM.readSystemTemp("local_user") then WUI.logout() end
 			end,
 			["Connect to Server"] = function()
-				tChoices = {"Enter Server ID#"}
-				local tServers = WNC.discover("server", 5)
-				if #tServers > 0 then
-					tChoices[#tChoices + 1] = "\\"
-					for k, v in pairs(tServers) do
-						tChoices[#tChoices + 1] = "ID#: " .. k .. ", Distance: " .. v
-					end
-				end
-				local sSelection = WUI.menu(tChoices, "Server Selection", "Control Panel", true)
-				WUI.clear("Control Panel")
-				if sSelection == "Enter Server ID#" then
-					WUI.slowPrint("Enter Server ID#: \n")
-					WUI.registerTextField(nil, "%d")
-					local t = WUI.getText()
-					if t then
-						WUI.clear("Control Panel")
-						WUI.slowPrint("Connecting to Server...", nil, nil, true)
-						WNC.send(t[1], "connection_request", "client_connection")
-						local nSenderID, _, sEvent, p1 = WNC.receive(t[1], 5)
-						WUI.clear("Control Panel")
-						if sEvent == "connection_success" then
-							WDM.writeSystemData(t[1], "server_id")
-							WUI.slowPrint("Connected to Server. Log out to apply changes.", nil, nil, true)
-						elseif sEvent == "connection_failure" then
-							WUI.slowPrint("Could not connect to Server: \n")
-							WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
-							WUI.slowPrint("Press any key to continue...")
-							os.pullEvent("key") 
-						end
-					end
-				elseif sSelection ~= "Return" then
-					local nServerID = string.sub(sSelection, 6, string.find(sSelection, ",") - 1)
+				WUI.slowPrint("Enter Server ID#: \n")
+				WUI.registerTextField(nil, "%d")
+				local t = WUI.getText(true)
+				if t then
+					local nServerID = tonumber(t[1])
+					WUI.clear("Control Panel")
 					WUI.slowPrint("Connecting to Server...", nil, nil, true)
 					WNC.send(nServerID, "connection_request", "client_connection")
 					local nSenderID, _, sEvent, p1 = WNC.receive(nServerID, 5)
@@ -531,7 +505,7 @@ repeat
 				WUI.slowPrint("Testing Connections... \n", nil, nil, true)
 				WUI.clear("Control Panel")
 				local nServerID = WDM.readSystemData("server_id")
-				if nServerID then
+				if not WDM.readServerData("server_state") and nServerID then
 					WNC.send(nServerID, "connection_request", "test_connection")
 					local nSenderID, _, sEvent, p1 = WNC.receive(nServerID, 5)
 					if sEvent == "connection_response" then

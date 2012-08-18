@@ -360,7 +360,7 @@ function registerTextField(nPos, sAllowedPattern, nLength, bHidden)
 	local nWidth = term.getSize()
 	local i = 1
 	nPos = nPos or y
-	nLength = nLength or nWidth - 2
+	nLength = nLength or (nWidth - 2)
 	while true do
 		if tTextFields[i] then
 			if nPos > tTextFields[i][1] then

@@ -28,40 +28,22 @@ function broadcast(sEvent, p1, p2, p3, p4, p5)
 	rednet.broadcast(encryptData(nil, textutils.serialize({sEvent, p1, p2, p3, p4, p5})))
 end
 
-function receive(nSenderFilter, nTimeout)
+function receive(senderFilter, nTimeout, bExclude) -- bExclude: true = exclude Sender IDs, false = include Sender IDs
 	local timer = nil
+	if type(senderFilter) == "number" then senderFilter = {senderFilter} end
 	if nTimeout then timer = os.startTimer(nTimeout) end
 	while true do
 		local _event, p1, p2, nDistance = os.pullEvent()
 		if _event == "rednet_message" then
 			local nSenderID, nReceiverID, sMessage = decryptData(p2)
-			if (nReceiverID == os.getComputerID() or not nReceiverID) and (nSenderFilter == nSenderID or not nSenderFilter) then
-				local sEvent, p1, p2, p3, p4, p5 = unpack(textutils.unserialize(sMessage))
-				return nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5
+			if nReceiverID == os.getComputerID() or not nReceiverID then
+				if not senderFilter or (bExclude == true and not WDM.matchFromTable(nSenderID, senderFilter)) or (not bExclude and WDM.matchFromTable(nSenderID, senderFilter)) then
+					local sEvent, p1, p2, p3, p4, p5 = unpack(textutils.unserialize(sMessage))
+					return nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5
+				end
 			end
 		elseif _event == "timer" and p1 == timer then
 			return nil, nil, "connection_failure", "timeout"
 		end
 	end
-end
-
-function discover(sType, nTimeout)
-	local timer = os.startTimer((nTimeout or 5))
-	local tDiscoveries = {}
-	local sEvent, p1 = parallel.waitForAny(function()
-		while true do
-			local _event, p1 = os.pullEvent("timer")
-			if p1 == timer then return "discovery_failure", "timeout" end
-		end
-	end,
-	function()
-		while true do
-			broadcast("discovery_request", sType)
-			local nSenderID, nDistance, sEvent = receive()
-			if sEvent == "discovery_response" then
-				tDiscoveries[tostring(nSenderID)] = nDistance
-			end
-		end
-	end)
-	return tDiscoveries
 end
