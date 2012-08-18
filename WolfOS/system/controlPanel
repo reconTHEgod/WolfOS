@@ -484,7 +484,6 @@ repeat
 						tChoices[#tChoices + 1] = "ID#: " .. k .. ", Distance: " .. v
 					end
 				end
-				tChoices = WDM.mergeTables(tChoices, {"\\", })
 				local sSelection = WUI.menu(tChoices, "Server Selection", "Control Panel", true)
 				WUI.clear("Control Panel")
 				if sSelection == "Enter Server ID#" then
