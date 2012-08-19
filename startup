@@ -1,0 +1,17 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+local tDisks = {}
+for k, v in pairs(rs.getSides()) do
+	if disk.isPresent(v) then tDisks[#tDisks + 1] = v end
+end
+if not fs.exists("/disk/installer") or #tDisks > 1 then
+	term.clear()
+	term.setCursorPos(1, 1)
+	print("Please remove all other disks to allow the WolfOS installer to run!")
+	print("\nPress any key to continue...")
+	os.pullEventRaw("key")
+else
+	os.run({}, "/disk/installer")
+end
+os.shutdown()
