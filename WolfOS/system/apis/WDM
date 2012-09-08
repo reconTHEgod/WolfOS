@@ -158,23 +158,39 @@ function readServerData(sIndex) -- server_state, user_state, data_state, email_s
 	return tServerData
 end
 
-function writeSystemTemp(sString, sIndex)
-	tSystemTemp[sIndex] = sString
+function writeSystemTemp(arg, sIndex)
+	if sIndex then
+		tSystemTemp[sIndex] = arg
+	else
+		tSystemTemp = arg
+	end
 end
 
-function writeSystemData(sString, sIndex)
+function writeSystemData(arg, sIndex)
 	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.system_data .. "system.dat"))) end
-	tSystemData[sIndex] = sString
+	if sIndex then
+		tSystemData[sIndex] = arg
+	else
+		tSystemData = arg
+	end
 	fWrite(tSystemDirs.system_data .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
 end
 
-function writeServerTemp(sString, sIndex)
-	tServerTemp[sIndex] = sString
+function writeServerTemp(arg, sIndex)
+	if sIndex then
+		tServerTemp[sIndex] = arg
+	else
+		tServerTemp = arg
+	end
 end
 
-function writeServerData(sString, sIndex)
+function writeServerData(arg, sIndex)
 	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.server_data .. "server.dat"))) end
-	tServerData[sIndex] = sString
+	if sIndex then
+		tServerData[sIndex] = arg
+	else
+		tServerData = arg
+	end
 	fWrite(tSystemDirs.server_data .. "server.dat", encryption.toBase64(textutils.serialize(tServerData)))
 end
 
