@@ -43,7 +43,7 @@ local function getFile(sPath)
 			if sEvent == "http_success" then
 				return p2.readAll()
 			elseif sEvent == "http_failure" then
-				error("Error occurred when fetching online file: " .. p2)
+				error("Error occurred when fetching online file")
 			end
 		end
 	end
