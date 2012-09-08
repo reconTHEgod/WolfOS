@@ -85,6 +85,7 @@ WDM.writeServerData({})
 
 print("\nWolfOS " .. sVer .. " installation is complete!")
 print( "\nPress any key to continue..." )
-os.pullEventRaw( "key" ) 
-disk.eject(fs.getDrive("/disk"))
+os.pullEventRaw( "key" )
+local sDrive = fs.getDrive("/disk")
+if sDrive then disk.eject(sDrive) end
 os.reboot()
