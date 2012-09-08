@@ -161,7 +161,7 @@ end
 function writeSystemTemp(arg, sIndex)
 	if sIndex then
 		tSystemTemp[sIndex] = arg
-	elseif type(arg) == "table"
+	elseif type(arg) == "table" then
 		tSystemTemp = arg
 	end
 end
@@ -170,7 +170,7 @@ function writeSystemData(arg, sIndex)
 	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.system_data .. "system.dat"))) end
 	if sIndex then
 		tSystemData[sIndex] = arg
-	elseif type(arg) == "table"
+	elseif type(arg) == "table" then
 		tSystemData = arg
 	end
 	fWrite(tSystemDirs.system_data .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
@@ -179,7 +179,7 @@ end
 function writeServerTemp(arg, sIndex)
 	if sIndex then
 		tServerTemp[sIndex] = arg
-	elseif type(arg) == "table"
+	elseif type(arg) == "table" then
 		tServerTemp = arg
 	end
 end
@@ -188,7 +188,7 @@ function writeServerData(arg, sIndex)
 	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.server_data .. "server.dat"))) end
 	if sIndex then
 		tServerData[sIndex] = arg
-	elseif type(arg) == "table"
+	elseif type(arg) == "table" then
 		tServerData = arg
 	end
 	fWrite(tSystemDirs.server_data .. "server.dat", encryption.toBase64(textutils.serialize(tServerData)))
