@@ -58,7 +58,7 @@ if bDisk then
 	end
 else
 	for k, v in pairs(tFiles) do
-		tFiles[k] = "https://raw.github.com/toxicwolf/WolfOS/master/" .. k 
+		tFiles[k] = "https://raw.github.com/toxicwolf/WolfOS/master/os_files/" .. k 
 	end
 end
 
