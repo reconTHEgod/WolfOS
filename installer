@@ -1,0 +1,90 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+local sVer = "1.4.0_b6"
+local tArgs = {...}
+local bDisk = tArgs[1]
+local tDirs = {"/boot", "/WolfOS", "/WolfOS/system", "/WolfOS/system/apis", "/WolfOS/system/data", "/WolfOS/server", "/WolfOS/server/data", "/WolfOS/appdata",
+		"/WolfOS/users", "/WolfOS/utilities", "/WolfOS/programs", "/WolfOS/utilities/diskManager.util", "/WolfOS/programs/musicPlayer.prog"}
+local tFiles = {
+	["boot/WolfOS"] = "",
+	["WolfOS/system/apis/bit32"] = "",
+	["WolfOS/system/apis/encryption"] = "",
+	["WolfOS/system/apis/hash"] = "",
+	["WolfOS/system/apis/term"] = "",
+	["WolfOS/system/apis/WAU"] = "",
+	["WolfOS/system/apis/WDM"] = "",
+	["WolfOS/system/apis/WNC"] = "",
+	["WolfOS/system/apis/WPH"] = "",
+	["WolfOS/system/apis/WUI"] = "",
+	["WolfOS/system/controlPanel"] = "",
+	["WolfOS/system/login"] = "",
+	["WolfOS/system/mainMenu"] = "",
+	["WolfOS/system/programMenu"] = "",
+	["WolfOS/system/shell"] = "",
+	["WolfOS/system/startupMenu"] = "",
+	["WolfOS/system/utilityMenu"] = "",
+	["WolfOS/server/user"] = "",
+	["WolfOS/programs/musicPlayer.prog/musicPlayer"] = "",
+	["WolfOS/utilities/diskManager.util/diskManager"] = "",
+}
+
+local function getFile(sPath)
+	if bDisk then
+		local f = fs.open(sPath, "r")
+		local t = f.readAll()
+		f.close()
+		return t
+	else
+		if not http then error("Enable the HTTP API in the ComputerCraft config file!") end
+		http.request(sPath)
+		while true do
+			local sEvent, p1, p2 = os.pullEventRaw()
+			if sEvent == "http_success" then
+				return p2.readAll()
+			elseif sEvent == "http_failure" then
+				error("Error occurred when fetching online file: " .. p2)
+			end
+		end
+	end
+	return nil
+end
+
+print("WolfOS " .. sVer .. " installation is starting...\n")
+
+if bDisk then
+	for k, v in pairs(tFiles) do
+		tFiles[k] = "disk/os_files/" .. k 
+	end
+else
+	for k, v in pairs(tFiles) do
+		tFiles[k] = "https://raw.github.com/toxicwolf/WolfOS/master/" .. k 
+	end
+end
+
+print("Creating directories...")
+for k, v in pairs(tDirs) do
+	if not fs.isDir(v) then
+		fs.makeDir(v)
+		print(v)
+	end
+end
+print("\nInstalling files...")
+for k, v in pairs(tFiles) do
+	local f = fs.open(k, "w")
+	f.write(getFile(v))
+	f.close()
+	print(k)
+end
+
+print("\nCreating data files...")
+os.loadAPI("/WolfOS/system/apis/encryption")
+os.loadAPI("/WolfOS/system/apis/WDM")
+WDM.writeSystemData({["version"] = sVer, ["offline"] = true})
+WDM.writeServerData({})
+
+print("\nWolfOS " .. sVer .. " installation is complete!")
+print( "\nPress any key to continue..." )
+os.pullEventRaw( "key" ) 
+disk.eject(fs.getDrive("/disk"))
+os.reboot()
