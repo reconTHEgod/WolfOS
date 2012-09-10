@@ -1,9 +1,8 @@
--- Install lua parts of the os api
-function os.pullEventRaw( _sFilter )
-	return coroutine.yield( _sFilter )
+-- Install globals
+function os.pullEvent(_sFilter)
+	return coroutine.yield(_sFilter)
 end
 
--- Install globals
 function sleep( _nTime )
     local timer = os.startTimer( _nTime )
 	repeat
@@ -241,7 +240,7 @@ local ok, err = pcall(function()
 		term.setCursorPos(1, 1)
 		print("Please remove all other disks to allow the WolfOS installer to run!")
 		print("\nPress any key to continue...")
-		os.pullEventRaw("key")
+		os.pullEvent("key")
 	else
 		os.run({}, "/disk/installer", false)
 	end
@@ -255,6 +254,6 @@ end
 pcall( function()
 	term.setCursorBlink( false )
 	print( "Press any key to continue..." )
-	os.pullEventRaw( "key" ) 
+	os.pullEvent( "key" ) 
 end )
 os.shutdown()

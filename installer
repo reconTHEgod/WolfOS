@@ -1,91 +1,192 @@
 --[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
-local sVer = "1.4.0_b6"
+--Defining constants, variables and local functions
 local tArgs = {...}
-local bDisk = tArgs[1]
+local bStandalone = tArgs[1]
+if bStandalone ~= false then bStandalone = true end
+local bOnline = false
+if bStandalone then bOnline = true end
+
+local sVer, nInstallerVer = "1.4.0_b6", 1.0
+local sHttpPath = "https://raw.github.com/toxicwolf/WolfOS/master/"
+
 local tDirs = {"/boot", "/WolfOS", "/WolfOS/system", "/WolfOS/system/apis", "/WolfOS/system/data", "/WolfOS/server", "/WolfOS/server/data", "/WolfOS/appdata",
 		"/WolfOS/users", "/WolfOS/utilities", "/WolfOS/programs", "/WolfOS/utilities/diskManager.util", "/WolfOS/programs/musicPlayer.prog"}
 local tFiles = {
-	["boot/WolfOS"] = "",
-	["WolfOS/system/apis/bit32"] = "",
-	["WolfOS/system/apis/encryption"] = "",
-	["WolfOS/system/apis/hash"] = "",
-	["WolfOS/system/apis/term"] = "",
-	["WolfOS/system/apis/WAU"] = "",
-	["WolfOS/system/apis/WDM"] = "",
-	["WolfOS/system/apis/WNC"] = "",
-	["WolfOS/system/apis/WPH"] = "",
-	["WolfOS/system/apis/WUI"] = "",
-	["WolfOS/system/controlPanel"] = "",
-	["WolfOS/system/login"] = "",
-	["WolfOS/system/mainMenu"] = "",
-	["WolfOS/system/programMenu"] = "",
-	["WolfOS/system/shell"] = "",
-	["WolfOS/system/startupMenu"] = "",
-	["WolfOS/system/utilityMenu"] = "",
-	["WolfOS/server/user"] = "",
-	["WolfOS/programs/musicPlayer.prog/musicPlayer"] = "",
-	["WolfOS/utilities/diskManager.util/diskManager"] = "",
+	{["put"] = "boot/WolfOS"},
+	{["put"] = "WolfOS/system/apis/bit32"},
+	{["put"] = "WolfOS/system/apis/encryption"},
+	{["put"] = "WolfOS/system/apis/hash"},
+	{["put"] = "WolfOS/system/apis/term"},
+	{["put"] = "WolfOS/system/apis/WAU"},
+	{["put"] = "WolfOS/system/apis/WDM"},
+	{["put"] = "WolfOS/system/apis/WNC"},
+	{["put"] = "WolfOS/system/apis/WPH"},
+	{["put"] = "WolfOS/system/apis/WUI"},
+	{["put"] = "WolfOS/system/controlPanel"},
+	{["put"] = "WolfOS/system/login"},
+	{["put"] = "WolfOS/system/mainMenu"},
+	{["put"] = "WolfOS/system/programMenu"},
+	{["put"] = "WolfOS/system/shell"},
+	{["put"] = "WolfOS/system/startupMenu"},
+	{["put"] = "WolfOS/system/utilityMenu"},
+	{["put"] = "WolfOS/server/user"},
+	{["put"] = "WolfOS/server/email"},
+	{["put"] = "WolfOS/programs/musicPlayer.prog/musicPlayer"},
+	--{["put"] = "WolfOS/programs/emailClient.prog/emailClient"},
+	{["put"] = "WolfOS/utilities/diskManager.util/diskManager"},
 }
 
-local function getFile(sPath)
-	if bDisk then
+local function removeAllFiles()
+	if fs.exists("/WolfOS") then fs.delete("/WolfOS") end
+	if fs.exists("/boot/WolfOS") then fs.delete("/boot/WolfOS") end
+end
+
+local function fetchFile(sPath)
+	local ok, p1 = pcall(function()
 		local f = fs.open(sPath, "r")
 		local t = f.readAll()
 		f.close()
 		return t
-	else
-		if not http then error("Enable the HTTP API in the ComputerCraft config file!") end
-		http.request(sPath)
-		while true do
-			local sEvent, p1, p2 = os.pullEventRaw()
-			if sEvent == "http_success" then
-				return p2.readAll()
-			elseif sEvent == "http_failure" then
-				error("Error occurred when fetching online file")
+	end)
+	if not ok and bOnline then
+		ok, p1 = pcall(function()
+			if not http then return error("HTTP API not enabled", 0) end
+			http.request(sPath)
+			while true do
+				local sEvent, p1, p2 = coroutine.yield()
+				if sEvent == "http_success" then
+					t =  p2.readAll()
+					p2.close()
+					return t
+				elseif sEvent == "http_failure" then
+					error("HTTP failure when downloading:\n\n" .. sPath, 0)
+				end
 			end
-		end
+		end)
+		if not ok then return false, p1 end
 	end
-	return nil
+	return true, p1
 end
 
-print("WolfOS " .. sVer .. " installation is starting...\n")
+local function putFile(sFetchPath, tPutPaths)
+	if type(tPutPaths) ~= "table" then tPutPaths = {tPutPaths} end
+	for _, sPutPath in ipairs(tPutPaths) do
+		local ok, p1 = fetchFile(sFetchPath)
+		if ok then
+			local f = fs.open(sPutPath, "w")
+			f.write(p1)
+			f.close()
+		else
+			term.clear()
+			term.setCursorPos(1, 1)
+			print(p1)
+			print( "\nPress any key to continue..." )
+			coroutine.yield( "key" )
+			removeAllFiles()
+			os.shutdown()
+		end	
+	end
+end
 
+--Fetching and loading required APIs
+local tAPIs = {tFiles[2], tFiles[3], tFiles[4], tFiles[7], tFiles[10]}
+if bStandalone then
+	for _, v in ipairs(tAPIs) do
+		putFile(sHttpPath .. "os_files/" .. v.put, "/disk/os_files/" .. v.put)
+	end
+end
+for _, v in ipairs(tAPIs) do
+	os.loadAPI("/disk/os_files/" .. v.put)
+end
+
+--Start installer GUI
+WUI.bootScreen("Initiating WolfOS Installer", "Please wait...")
+
+local tChoices
+if bStandalone then
+	tChoices = {"Download and install latest WolfOS version", "\\", "Exit"}
+else
+	tChoices = {"Install WolfOS offline", "\\", "Exit"}
+	if http then
+		tChoices = WDM.mergeTables({"Install WolfOS and download updates"}, tChoices)
+	end
+end
+
+local sSelection = WUI.menu(tChoices, "WolfOS " .. sVer, "WolfOS Installer")
+
+if sSelection == "Exit" then
+	os.shutdown()
+elseif sSelection == "Install WolfOS and download updates" then
+	bOnline = true
+	local nLatestInstallerVer = tonumber(fetchFile(sHttpPath .. "LATEST_INSTALLER_VERSION"))
+	if nLatestInstallerVer > nInstallerVer then
+		putFile("/disk/installer", sHttpPath .. "installer")
+		putFile("/disk/boot/WolfOS Installer", sHttpPath .. "boot/WolfOS Installer")
+		WUI.clear("WolfOS Installer")
+		WUI.slowPrint("WolfOS Installer has been updated to v" .. nLatestInstallerVer .. ". \n")
+		WUI.slowPrint("Rebooting...")
+		sleep(2)
+		os.reboot()
+	end
+end
+
+--Processing file paths
 if bDisk then
-	for k, v in pairs(tFiles) do
-		tFiles[k] = "disk/os_files/" .. k 
+	for _, v in ipairs(tFiles) do
+		v.fetch = "disk/os_files/" .. v.put 
 	end
 else
-	for k, v in pairs(tFiles) do
-		tFiles[k] = "https://raw.github.com/toxicwolf/WolfOS/master/os_files/" .. k 
+	for _, v in ipairs(tFiles) do
+		v.fetch = sHttpPath .. "os_files/" .. v.put 
 	end
 end
 
-print("Creating directories...")
-for k, v in pairs(tDirs) do
+--Install WolfOS
+local s1, s2 = "", ""
+local function redraw()
+	WUI.clear("WolfOS Installer")
+	WUI.fastPrint("WolfOS " .. sVer .. " \n")
+	WUI.fastPrint(s1 .. " \n")
+	WUI.fastPrint(s2)
+end
+
+s1 = "Creating directories..."
+redraw()
+for _, v in ipairs(tDirs) do
 	if not fs.isDir(v) then
 		fs.makeDir(v)
-		print(v)
+		s2 = v
+		redraw()
+		sleep(0.01)
 	end
 end
-print("\nInstalling files...")
-for k, v in pairs(tFiles) do
-	local f = fs.open(k, "w")
-	f.write(getFile(v))
-	f.close()
-	print(k)
+if bOnline then s1 = "Downloading and installing files..." else s1 = "Installing files..." end
+s2 = ""
+redraw()
+for _, v in ipairs(tFiles) do
+	if bOnline then
+		putFile(v.fetch, {v.put, "/disk/os_files/" .. v.put})
+	else
+		putFile(v.fetch, v.put)
+	end
+	s2 = v.put
+	redraw()
+	sleep(0.01)
 end
 
-print("\nCreating data files...")
-os.loadAPI("/WolfOS/system/apis/encryption")
-os.loadAPI("/WolfOS/system/apis/WDM")
+s1 = "Creating data files..."
+s2 = ""
+redraw()
 WDM.writeSystemData({["version"] = sVer, ["offline"] = true})
 WDM.writeServerData({})
 
-print("\nWolfOS " .. sVer .. " installation is complete!")
-print( "\nPress any key to continue..." )
-os.pullEventRaw( "key" )
+--Finish installation
+WUI.clear("WolfOS Installer")
+WUI.slowPrint("WolfOS " .. sVer .. " installation is complete! \n")
+WUI.slowPrint( "Press any key to continue..." )
+coroutine.yield( "key" )
 local sDrive = fs.getDrive("/disk")
 if sDrive then disk.eject(sDrive) end
 os.reboot()
