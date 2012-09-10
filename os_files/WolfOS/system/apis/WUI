@@ -135,17 +135,20 @@ end
 
 function clear(sProgram)
 	local nWidth = term.getSize()
+	local sClock = textutils.formatTime(os.time(), false), "right", "top"
+	if not bShowClock then sClock = "" end
 	term.clear()
 	if sProgram ~= tClearStack[#tClearStack] then
+		local bClock = bShowClock
 		bShowClock = false
 		sleep(0.1)
 		slowWrite(sProgram, "left", "top")
-		slowWrite(textutils.formatTime(os.time(), false), "right", "top")
-		bShowClock = true
+		slowWrite(sClock)
+		bShowClock = bClock
 		slowWrite(string.rep("-", nWidth), "left", 2)
 	else
 		fastWrite(sProgram, "left", "top")
-		fastWrite(textutils.formatTime(os.time(), false), "right", "top")
+		fastWrite(sClock)
 		fastWrite(string.rep("-", nWidth), "left", 2)
 	end
 	tClearStack = {sProgram}
