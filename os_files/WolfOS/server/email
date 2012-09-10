@@ -1,0 +1,43 @@
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--WolfOS Email Server Module
+
+while true do
+	if not WDM.readSystemData("offline") and WDM.readServerData("server_state") and WDM.readServerData("email_state") then
+		local nSenderID, nDistance, sEvent, p1, p2, p3, p4, p5 = WNC.receive(nil, 1)
+		if sEvent == "data_request" then
+			if p1 == "email_list" then
+				local tUser = WAU.exists(p2)
+				if tUser then
+					WNC.send(nSenderID, "data_success", textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat"))))
+				end
+			end
+		elseif sEvent == "data_push" then
+			if p1 == "new_email" then
+				local tUser = WAU.exists(p2)
+				if tUser then
+					local tEmails = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat")))
+					table.insert(tEmails, 1, {["status"] = "unread", ["sender"] = p3, ["header"] = p4, ["body"] = p5})
+					WDM.fWrite(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat", encryption.toBase64(textutils.serialize(tEmails)))
+				end
+			elseif p1 == "email_status" then
+				local tUser = WAU.exists(p2)
+				if tUser then
+					local tEmails = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat")))
+					tEmails[p3].status = p4
+					WDM.fWrite(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat", encryption.toBase64(textutils.serialize(tEmails)))
+				end
+			elseif p1 == "delete_email" then
+				local tUser = WAU.exists(p2)
+				if tUser then
+					local tEmails = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat")))
+					table.remove(tEmails, p3)
+					WDM.fWrite(WDM.getSystemDir("users") .. tUser.uid .. "/" ..  "email.dat", encryption.toBase64(textutils.serialize(tEmails)))
+				end
+			end
+		end
+	else
+		sleep(1)
+	end
+end

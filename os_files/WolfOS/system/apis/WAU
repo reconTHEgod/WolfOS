@@ -44,6 +44,7 @@ function createUser(sName, sHash)
 		tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sName, ["hash"] = sHash, ["type"] = "user"}
 		WDM.fWrite(WDM.getSystemDir("system_data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 		fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
+		WDM.fWrite(WDM.getSystemDir("users") .. sUID .. "/email.dat", encryption.toBase64(textutils.serialize({})))
 	end
 end
 
