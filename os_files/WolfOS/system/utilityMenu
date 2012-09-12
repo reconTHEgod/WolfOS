@@ -6,7 +6,7 @@ local tChoices = {}
 local tActions = {}
 local sUser = WDM.readSystemTemp("current_user")
 while bMenuLoop == true do
-	local tAll = WDM.list(WDM.getSystemDir("utilities"))
+	local tAll = WDM.list(WDM.getSystemDir("programs"))
 	for nItem = 1, #tAll do
 		if string.sub(tAll[nItem], #tAll[nItem] - 4) == ".util" then
 			local sName = WDM.deCamelCase(string.sub(tAll[nItem], 1, #tAll[nItem] - 5))
@@ -20,6 +20,6 @@ while bMenuLoop == true do
 	else
 		bMenuLoop = false
 		local sName = WDM.camelCase(sSelection)
-		os.run({}, WDM.getSystemDir("utilities") .. sName .. ".util/" .. sName)
+		os.run({}, WDM.getSystemDir("programs") .. sName .. ".util/" .. sName)
 	end
 end

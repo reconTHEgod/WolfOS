@@ -4,10 +4,10 @@ Please ask for permission before attempting to redistribute any code relating to
 --WolfOS Data Management Library
 
 local _root = "/WolfOS/"
-local _utils, _progs, _users, _appdata, _system, _server = _root .. "utilities/", _root .. "programs/", _root .. "users/", _root .. "appdata/", _root .. "system/", _root .. "server/"
-local _systemdata, _serverdata = _system .. "data/", _server .. "data/"
+local _progs, _data, _system, _server = _root .. "programs/", _root .. "data/", _root .. "system/", _root .. "server/"
+local _users = _data .. "users/"
 
-local tSystemDirs = {["root"] = _root, ["utilities"] = _utils, ["programs"] = _progs, ["users"] = _users, ["appdata"] = _appdata, ["system"] = _system, ["server"] = _server, ["system_data"] = _systemdata, ["server_data"] = _serverdata}
+local tSystemDirs = {["root"] = _root, ["programs"] = _progs, ["users"] = _users, ["data"] = _data, ["system"] = _system, ["server"] = _server}
 local tSystemData, tSystemTemp, tServerData, tServerTemp = {}, {}, {}, {}
 local _sIteratorDir, _sIteratorItem = "", ""
 
@@ -136,7 +136,7 @@ function readSystemTemp(sIndex) -- current_uid, current_user, current_hash, curr
 end
 
 function readSystemData(sIndex) -- version, modem_port, modem_state, monitor_port, monitor_state, offline, server_id, relay_id,
-	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.system_data .. "system.dat"))) end
+	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	if sIndex then
 		return tSystemData[sIndex]
 	end
@@ -151,7 +151,7 @@ function readServerTemp(sIndex) -- user_module, data_module, email_module, im_mo
 end
 
 function readServerData(sIndex) -- server_state, user_state, data_state, email_state, im_state, ...
-	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.server_data .. "server.dat"))) end
+	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "server.dat"))) end
 	if sIndex then
 		return tServerData[sIndex]
 	end
@@ -167,13 +167,13 @@ function writeSystemTemp(arg, sIndex)
 end
 
 function writeSystemData(arg, sIndex)
-	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.system_data .. "system.dat"))) end
+	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	if sIndex then
 		tSystemData[sIndex] = arg
 	elseif type(arg) == "table" then
 		tSystemData = arg
 	end
-	fWrite(tSystemDirs.system_data .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
+	fWrite(tSystemDirs.data .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
 end
 
 function writeServerTemp(arg, sIndex)
@@ -185,13 +185,13 @@ function writeServerTemp(arg, sIndex)
 end
 
 function writeServerData(arg, sIndex)
-	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.server_data .. "server.dat"))) end
+	if #tServerData == 0 then tServerData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "server.dat"))) end
 	if sIndex then
 		tServerData[sIndex] = arg
 	elseif type(arg) == "table" then
 		tServerData = arg
 	end
-	fWrite(tSystemDirs.server_data .. "server.dat", encryption.toBase64(textutils.serialize(tServerData)))
+	fWrite(tSystemDirs.data .. "server.dat", encryption.toBase64(textutils.serialize(tServerData)))
 end
 
 function list(sDir)
