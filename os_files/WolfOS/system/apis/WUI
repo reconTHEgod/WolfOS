@@ -34,29 +34,47 @@ local function getAlignment(sText, sAxis, sAlign)
 end
 
 function fastWrite(sString, xPos, yPos)
-	sString = tostring(sString)
 	local nWidth, nHeight = term.getSize()
 	local a, b = term.getCursorPos()
 	local x = getAlignment(sString, "x", xPos) or a
 	local y = getAlignment(sString, "y", yPos) or b
 	term.setCursorPos(x, y)
-	local tWords = WDM.seperateString(sString, "%s", true)
-	local nWord = 1
-	while nWord <= #tWords do
-		if not tWords[nWord] then break end
-		local x, y = term.getCursorPos()
-		if tWords[nWord] == "\n" then
+	local function newLine()
+		if y + 1 <= nHeight then
 			term.setCursorPos(1, y + 1)
-			nWord = nWord + 1
-		else
-			if #tWords[nWord] > nWidth - (x - 1) then
-				term.setCursorPos(1, y + 1)
-				if string.find(nWord, "%s") then
-					_, nWord = WDM.matchFromTable("%s", tWords, nWord + 1)
+		end
+		x, y = term.getCursorPos()
+	end
+	while string.len(sString) > 0 do
+		local whitespace = string.match(sString, "^[ \t]+")
+		if whitespace then
+			term.write(whitespace)
+			x, y = term.getCursorPos()
+			sSTring = string.sub(sString, string.len(whitespace) + 1)
+		end
+		local newline = string.match(sString, "^\n")
+		if newline then
+			newLine()
+			sString = string.sub(sString, 2)
+		end
+		local text = string.match(sString, "^[^ \t\n]+")
+		if text then
+			sString = string.sub(sString, string.len(text) + 1)
+			if string.len(text) > nWidth then			
+				while string.len(text) > 0 do
+				if x > nWidth then
+					newLine()
+				end
+					term.write(text)
+					text = string.sub(text, (nWidth - x) + 2)
+					x, y = term.getCursorPos()
 				end
 			else
-				term.write(tWords[nWord])
-				nWord = nWord + 1
+				if x + string.len(text) > nWidth then
+					newLine()
+				end
+				term.write(text)
+				x, y = term.getCursorPos()
 			end
 		end
 	end
@@ -64,33 +82,52 @@ end
 
 function slowWrite(sString, xPos, yPos, bSleep)
 	bSleep = bSleep or false
-	sString = tostring(sString)
 	local nWidth, nHeight = term.getSize()
 	local a, b = term.getCursorPos()
-	xPos = getAlignment(sString, "x", xPos) or a
-	yPos = getAlignment(sString, "y", yPos) or b
-	term.setCursorPos(xPos, yPos)
-	local tWords = WDM.seperateString(sString, "%s", true)
-	local nWord = 1
-	repeat
-		if not tWords[nWord] then break end
-		local x, y = term.getCursorPos()
-		if tWords[nWord] == "\n" then
+	local x = getAlignment(sString, "x", xPos) or a
+	local y = getAlignment(sString, "y", yPos) or b
+	term.setCursorPos(x, y)
+	local function newLine()
+		if y + 1 <= nHeight then
 			term.setCursorPos(1, y + 1)
-			nWord = nWord + 1
-		else
-			if #tWords[nWord] > nWidth - (x - 1) then
-				term.setCursorPos(1, y + 1)
-				if string.find(nWord, "%s") then
-					_, nWord = WDM.matchFromTable("%s", tWords, nWord + 1)
+		end
+		x, y = term.getCursorPos()
+	end
+	while string.len(sString) > 0 do
+		local whitespace = string.match(sString, "^[ \t]+")
+		if whitespace then
+			term.write(whitespace)
+			x, y = term.getCursorPos()
+			sSTring = string.sub(sString, string.len(whitespace) + 1)
+		end
+		local newline = string.match(sString, "^\n")
+		if newline then
+			newLine()
+			sString = string.sub(sString, 2)
+		end
+		local text = string.match(sString, "^[^ \t\n]+")
+		if text then
+			sString = string.sub(sString, string.len(text) + 1)
+			if string.len(text) > nWidth then			
+				while string.len(text) > 0 do
+				if x > nWidth then
+					newLine()
+				end
+					term.write(text)
+					text = string.sub(text, (nWidth - x) + 2)
+					x, y = term.getCursorPos()
+					sleep(0.01)
 				end
 			else
-				term.write(tWords[nWord])
-				if not string.find(tWords[nWord], "%s") then sleep(0.01) end
-				nWord = nWord + 1
+				if x + string.len(text) > nWidth then
+					newLine()
+				end
+				term.write(text)
+				x, y = term.getCursorPos()
+				sleep(0.01)
 			end
 		end
-	until nWord > #tWords
+	end
 	if bSleep == true then sleep(1) end
 end
 
@@ -135,20 +172,17 @@ end
 
 function clear(sProgram)
 	local nWidth = term.getSize()
-	local sClock = textutils.formatTime(os.time(), false), "right", "top"
-	if not bShowClock then sClock = "" end
 	term.clear()
 	if sProgram ~= tClearStack[#tClearStack] then
-		local bClock = bShowClock
 		bShowClock = false
 		sleep(0.1)
 		slowWrite(sProgram, "left", "top")
-		slowWrite(sClock)
-		bShowClock = bClock
+		slowWrite(textutils.formatTime(os.time(), false), "right", "top")
+		bShowClock = true
 		slowWrite(string.rep("-", nWidth), "left", 2)
 	else
 		fastWrite(sProgram, "left", "top")
-		fastWrite(sClock)
+		fastWrite(textutils.formatTime(os.time(), false), "right", "top")
 		fastWrite(string.rep("-", nWidth), "left", 2)
 	end
 	tClearStack = {sProgram}
