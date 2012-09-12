@@ -50,7 +50,7 @@ function fastWrite(sString, xPos, yPos)
 		if whitespace then
 			term.write(whitespace)
 			x, y = term.getCursorPos()
-			sSTring = string.sub(sString, string.len(whitespace) + 1)
+			sString = string.sub(sString, string.len(whitespace) + 1)
 		end
 		local newline = string.match(sString, "^\n")
 		if newline then
@@ -98,7 +98,7 @@ function slowWrite(sString, xPos, yPos, bSleep)
 		if whitespace then
 			term.write(whitespace)
 			x, y = term.getCursorPos()
-			sSTring = string.sub(sString, string.len(whitespace) + 1)
+			sString = string.sub(sString, string.len(whitespace) + 1)
 		end
 		local newline = string.match(sString, "^\n")
 		if newline then
