@@ -24,7 +24,7 @@ function exists(sUser)
 		WNC.send(WDM.readSystemData("server_id"), "data_request", "user_list")
 		_, _, _, tUsers = WNC.receive(WDM.readSystemData("server_id"), 5)
 	elseif #tUsers == 0 then
-		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("system_data") .. "users.dat")))
+		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
 	end
 	if type(tUsers) == "table" then
 		for nUser, tUser in ipairs(tUsers) do
@@ -42,9 +42,8 @@ function createUser(sName, sHash)
 	else
 		local sUID = generateUID()
 		tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sName, ["hash"] = sHash, ["type"] = "user"}
-		WDM.fWrite(WDM.getSystemDir("system_data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+		WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 		fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
-		WDM.fWrite(WDM.getSystemDir("users") .. sUID .. "/email.dat", encryption.toBase64(textutils.serialize({})))
 	end
 end
 
@@ -55,7 +54,7 @@ function removeUser(sUID)
 		local tUser, nUser = exists(sUID)
 		if tUser then
 			tUsers[nUser] = nil
-			WDM.fWrite(WDM.getSystemDir("system_data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+			WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 			fs.delete(WDM.getSystemDir("users") .. sUID .. "/")
 		end
 	end
