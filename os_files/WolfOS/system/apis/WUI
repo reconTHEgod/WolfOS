@@ -70,7 +70,7 @@ function fastWrite(sString, xPos, yPos)
 					x, y = term.getCursorPos()
 				end
 			else
-				if x + string.len(text) > nWidth then
+				if (x - 1) + string.len(text) > nWidth then
 					newLine()
 				end
 				term.write(text)
@@ -119,7 +119,7 @@ function slowWrite(sString, xPos, yPos, bSleep)
 					sleep(0.01)
 				end
 			else
-				if x + string.len(text) > nWidth then
+				if (x - 1) + string.len(text) > nWidth then
 					newLine()
 				end
 				term.write(text)
@@ -172,17 +172,20 @@ end
 
 function clear(sProgram)
 	local nWidth = term.getSize()
+	local sClock = textutils.formatTime(os.time(), false)
+	if not bShowClock then sClock = "" end
 	term.clear()
 	if sProgram ~= tClearStack[#tClearStack] then
+		local bClock = bShowClock
 		bShowClock = false
 		sleep(0.1)
 		slowWrite(sProgram, "left", "top")
-		slowWrite(textutils.formatTime(os.time(), false), "right", "top")
-		bShowClock = true
+		slowWrite(sClock, "right", "top")
+		bShowClock = bClock
 		slowWrite(string.rep("-", nWidth), "left", 2)
 	else
 		fastWrite(sProgram, "left", "top")
-		fastWrite(textutils.formatTime(os.time(), false), "right", "top")
+		fastWrite(sClock, "right", "top")
 		fastWrite(string.rep("-", nWidth), "left", 2)
 	end
 	tClearStack = {sProgram}
