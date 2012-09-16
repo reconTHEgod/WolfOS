@@ -3,7 +3,7 @@ function os.version()
 	if turtle then
 		return "TurtleOS 1.41"
 	end
-	return "WolfOS 1.3.0"
+	return "WolfOS 1.4.0"
 end
 
 function os.pullEventRaw( _sFilter )
