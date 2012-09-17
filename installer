@@ -22,15 +22,34 @@ local function printError(sError)
 	os.shutdown()
 end
 
-local function downloadFile(sUrl, sPath, sName)
-	sPath = string.gmatch(sPath, "os_files/([%w%_%.% %-%+%,%;%:%*%#%=%/]+)")
-	sDir = string.gmatch(sPath, "([%w%_%.% %-%+%,%;%:%*%#%=%/]+)/" .. sName .. "$")
+local s1, s2
+local function redraw()
+	if WUI then
+		WUI.clear("WolfOS Installer")
+		WUI.fastPrint(s1 .. "\n\n" .. s2)
+	end
+end
+
+local function installFile(sLocation, sPath, sName)
+	sPath = string.gmatch(sPath, "os_files/([%w%_%.% %-%+%,%;%:%*%#%=%/]+)")()
+	sDir = string.gmatch(sPath, "([%w%_%.% %-%+%,%;%:%*%#%=%/]+)/" .. sName .. "$")()
 	if sDir ~= nil and not fs.isDir(sDir) then
 		fs.makeDir(sDir)
 	end
-	local sResponse = http.get(sUrl)
+	if bOnline then s1 = "Downloading and installing file:" else s1 = "Installing file:" end
+	s2 = "/" .. sPath
+	redraw()
+	local sData = nil
+	if bOnline then
+		sData = http.get(sLocation).readAll()
+	else
+		local hFile = fs.open(sLocation, "r")
+		sData = hFile.readAll()
+		hFile.close()
+	end
+	redraw()
 	local hFile = fs.open(sPath, "w")
-	hFile.write(sResponse.readAll())
+	hFile.write(sData)
 	hFile.close()
 end
 
@@ -50,35 +69,51 @@ local function getGitContents(sPath)
 end
 
 local function isBlackListed(sPath)
-	if string.gmatch(sBlackList, "@" .. sPath) ~= nil then
+	if string.gmatch(sBlackList, "@" .. sPath)() ~= nil then
 		return true
 	end
 end
 
-local function install(sPath)
-	local bOk, p1, tPath, tName = getGitContents(sPath)
-	if bOk then
-		local tType = p1
-		for i, sData in pairs(tType) do
-			if sData == "file" then
-				local checkPath = http.get("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/"..tPath[i])
-				if checkPath == nil then
-					tPath[i] = tPath[i] .. "/" .. tName[i]
-				end
-				local _sPath = tPath[i]
-				if sInstallPath ~= "" then _sPath = fs.combine(sInstallPath, tPath[i]) end
-				if not isBlackListed(tPath[i]) then
-					downloadFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/"..tPath[i], _sPath, tName[i])
+local function main(sPath)
+	if bOnline then
+		local bOk, p1, tPath, tName = getGitContents(sPath)
+		if bOk then
+			local tType = p1
+			for i, sData in pairs(tType) do
+				if sData == "file" then
+					local checkPath = http.get("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/"..tPath[i])
+					if checkPath == nil then
+						tPath[i] = tPath[i] .. "/" .. tName[i]
+					end
+					local _sPath = tPath[i]
+					if sInstallPath ~= "" then _sPath = fs.combine(sInstallPath, tPath[i]) end
+					if not isBlackListed(tPath[i]) then
+						installFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/"..tPath[i], _sPath, tName[i])
+					end
 				end
 			end
-		end
-		for i, sData in pairs(tType) do
-			if sData == "dir" then
-				install(tPath[i])
+			for i, sData in pairs(tType) do
+				if sData == "dir" then
+					main(tPath[i])
+				end
 			end
+		else
+			printError(p1)
 		end
 	else
-		printError(p1)
+		for i, _sPath in pairs(fs.list(sPath)) do
+			if not fs.isDir(fs.combine(sPath, _sPath)) then
+				if not isBlackListed(_sPath) then
+					if sInstallPath ~= "" then _path = fs.combine(sInstallPath, string.sub(sPath, 6)) .. "/" .. _sPath end
+					installFile(fs.combine(sPath, _sPath), _path, _sPath)
+				end
+			end
+		end
+		for i, _sPath in pairs(fs.list(sPath)) do
+			if fs.isDir(fs.combine(sPath, _sPath)) then
+				main(fs.combine(sPath, _sPath))
+			end
+		end
 	end
 end
 
@@ -86,14 +121,19 @@ end
 if not http then
 	printError("HTTP API not enabled")
 end
+local bAPICheck = false
+local hFile = nil
 if bStandalone then
-	downloadFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/os_files/WolfOS/system/apis/WUI", "/WolfOS/system/apis/WUI", "WUI")
+	downloadFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/os_files/WolfOS/system/apis/WUI", "/os_files/WolfOS/system/apis/WUI", "WUI")
+	bAPICheck = os.loadAPI("/WolfOS/system/apis/WUI")
+	hFile = fs.open("/WolfOS/system/apis/WUI", "r")
+else
+	bAPICheck = os.loadAPI("/disk/os_files/WolfOS/system/apis/WUI")
+	hFile = fs.open("/disk/os_files/WolfOS/system/apis/WUI", "r")
 end
-local bAPICheck = os.loadAPI("/disk/os_files/WolfOS/system/apis/WUI")
 if not bAPICheck then
 	printError("Corrupt install disk")
 end
-local hFile = fs.open("/disk/os_files/WolfOS/system/apis/WUI", "r")
 local sVer = string.sub(hFile.readLine(), 3)
 hFile.close()
 
@@ -120,14 +160,11 @@ end
 
 local sSha = ""
 if bOnline then
-	install("os_files")
+	main("os_files")
 	sSha = http.get("https://api.github.com/repos/"..sGitUser.."/"..sGitRepo.."/branches/"..sGitBranch)
 	sSha = string.gmatch(sSha.readAll(), '"sha":"(%w+)"')()
 else
-	fs.delete("/boot/WolfOS")
-	fs.delete("/WolfOS")
-	fs.copy("/disk/os_files/boot/WolfOS", "/boot/WolfOS")
-	fs.copy("/disk/os_files/WolfOS", "/WolfOS")
+	main("disk/os_files")
 end
 
 os.loadAPI("/WolfOS/system/apis/encryption")
@@ -140,6 +177,7 @@ if WDM.exists("/WolfOS/data/system.dat") then
 	tSystemData = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "system.dat")))
 end
 if sSha ~= "" then tSystemData["sha"] = sSha end
+if tSystemData["offline"] == nil then tSystemData["offline"] = true end
 tSystemData["version"] = sVer
 WDM.fWrite(WDM.getSystemDir("data") .. "system.dat", encryption.toBase64(textutils.serialize(tSystemData)))
 if not WDM.exists("/WolfOS/data/server.dat") then WDM.fWrite(WDM.getSystemDir("data") .. "server.dat", encryption.toBase64(textutils.serialize({}))) end
@@ -149,6 +187,4 @@ WUI.clear("WolfOS Installer")
 WUI.slowPrint("WolfOS " .. sVer .. " installation is complete!\n")
 WUI.slowPrint("Press any key to continue...")
 coroutine.yield("key")
-local sDrive = fs.getDrive("/disk")
-if sDrive then disk.eject(sDrive) end
-os.reboot()
+os.shutdown()
