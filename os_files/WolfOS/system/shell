@@ -47,8 +47,13 @@ print("Starting WolfOS...")
 print("Loading User Interface...")
 sleep(0.01)
 WUI.bootScreen("Initiating WolfOS", "Please wait...")
+WUI.showClock(true)
 local runOS = function()
-	os.run({}, WDM.getSystemDir("system") .. "startupMenu")
+	if fs.isDir(WDM.getSystemDir("data") .. "users") and WDM.exists(WDM.getSystemDir("data") .. "users.dat") then
+		os.run({}, WDM.getSystemDir("system") .. "startupMenu")
+	else
+		os.run({}, WDM.getSystemDir("system") .. "setup")
+	end
 end
 local runClock = WUI.setupClock()
 local runCoreModule = function()

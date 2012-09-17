@@ -1,0 +1,42 @@
+--1.4.0_b6
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+WUI.clear("WolfOS Setup")
+WUI.slowPrint("Welcome to WolfOS!\n\nPlease create a User Account to complete the setup.", nil, nil, true)
+
+--Create User Account
+WUI.clear("WolfOS Setup")
+while true do
+	WUI.slowPrint("Please enter a User Account ID:\n")
+	WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
+	WUI.slowPrint("\n\nPlease enter a Passcode:\n")
+	WUI.registerTextField(nil, "%w", 16, true)
+	local t = WUI.getText(false)
+	WUI.clear("WolfOS Setup")
+	if t then
+		local sUserInput, sPassInput = t[1], t[2]
+		if #sUserInput > 0 and #sPassInput > 7 then
+			if not WDM.exists(WDM.getSystemDir("data") .. "users.dat") then
+				WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", "")
+			end
+			if not fs.isDir(WDM.getSystemDir("data") .. "users") then
+				fs.makeDir(WDM.getSystemDir("data") .. "users")
+			end
+			WAU.createUser(sUserInput, hash.sha256(sPassInput))
+			WAU.changeUserData(sUserInput, "type", "admin")
+			WUI.clear("WolfOS Setup")
+			WUI.slowPrint("User Account created successfully!\n\nSetup is now complete.\nThank you for choosing WolfOS!", nil, nil, true)
+			os.run({}, WDM.getSystemDir("system") .. "startupMenu")
+			break
+		else
+			if #sUserInput < 1 then
+				WUI.slowPrint("User Account IDs must be between 1 and 16 characters!")
+			end
+			if #sPassInput < 8 then
+				WUI.slowPrint("Passcodes must be between 8 and 16 characters!")
+			end
+			WUI.slowPrint("")
+		end
+	end
+end
