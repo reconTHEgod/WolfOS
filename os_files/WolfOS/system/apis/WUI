@@ -129,7 +129,7 @@ function slowWrite(sString, xPos, yPos, bSleep)
 			end
 		end
 	end
-	if bSleep == true then sleep(1) end
+	if bSleep == true then sleep(1.5) end
 end
 
 function fastPrint(sString, xPos, yPos)
