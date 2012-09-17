@@ -31,8 +31,8 @@ local function redraw()
 end
 
 local function installFile(sLocation, sPath, sName)
-	sPath = string.gmatch(sPath, "os_files/([%w%_%.% %-%+%,%;%:%*%#%=%/]+)")()
-	sDir = string.gmatch(sPath, "([%w%_%.% %-%+%,%;%:%*%#%=%/]+)/" .. sName .. "$")()
+	local sPath = string.gmatch(sPath, "os_files/([%w%_%.% %-%+%,%;%:%*%#%=%/]+)")()
+	local sDir = string.gmatch(sPath, "([%w%_%.% %-%+%,%;%:%*%#%=%/]+)/" .. sName .. "$")()
 	if sDir ~= nil and not fs.isDir(sDir) then
 		fs.makeDir(sDir)
 	end
