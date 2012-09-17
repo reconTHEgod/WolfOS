@@ -69,7 +69,7 @@ function changeUserData(sUID, sIndex, sString)
 		if tUser then
 			tUser[sIndex] = sString
 			tUsers[nUser] = tUser
-			WDM.fWrite(WDM.getSystemDir("users") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
+			WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 		end
 	end
 end
