@@ -6,7 +6,6 @@ Please ask for permission before attempting to redistribute any code relating to
 
 local bShowClock = false
 local tClearStack = {}
-local tTextFields = {}
 
 local function getAlignment(sText, sAxis, sAlign)
 	local nWidth, nHeight = term.getSize()
@@ -320,25 +319,25 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
 		repeat
 			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
 		until sEvent == "key" or (tEventFilters and tEventFilters[sEvent])
-		if sEvent == "key" and p1 == 200 then
+		if sEvent == "key" and p1 == 200 then --up
 			move("up")
-		elseif sEvent == "key" and p1 == 208 then
+		elseif sEvent == "key" and p1 == 208 then --down
 			move("down")
-		elseif sEvent == "key" and p1 == 201 then
+		elseif sEvent == "key" and p1 == 201 then --page up
 			while tChoices[nSelection - 1] do
 				if not move("up") then break end
 			end
-		elseif sEvent == "key" and p1 == 209 then
+		elseif sEvent == "key" and p1 == 209 then --page down
 			while tChoices[nSelection + 1] do
 				if not move("down") then break end
 			end
-		elseif sEvent == "key" and p1 == 28 then
+		elseif sEvent == "key" and p1 == 28 then --enter
 			if tChoices[nSelection]["id"] == "return" and bReturn == true then
 				return "return", 0
 			elseif tChoices[nSelection] then
 				return tChoices[nSelection]["id"], nSelection
 			end
-		elseif sEvent == "key" and p1 == 14 then
+		elseif sEvent == "key" and p1 == 14 then --backspace
 			if bReturn == true then
 				return "return", 0
 			end
@@ -374,95 +373,74 @@ function choiceMenu(sQuestion)
 	return false
 end
 
-function registerTextField(nPos, sAllowedPattern, nLength, bHidden)
-	local x, y = term.getCursorPos()
-	local nWidth = term.getSize()
-	local i = 1
-	nPos = nPos or y
-	nLength = nLength or (nWidth - 2)
-	while true do
-		if tTextFields[i] then
-			if nPos > tTextFields[i][1] then
-				i = i + 1
-			elseif nPos == tTextFields[i][1] then
-				tTextFields[i] = {nPos, sAllowedPattern, nLength, bHidden}
-				break
-			else
-				table.insert(tTextFields, i, {nPos, sAllowedPattern, nLength, bHidden})
-				break
-			end
-		else
-			table.insert(tTextFields, i, {nPos, sAllowedPattern, nLength, bHidden})
-			break
+function getText(tTextFields, bReturn)
+	for k in ipairs(tTextFields) do
+		tTextFields[k]["contents"] = {}
+		for n = 1, tTextFields[k]["height"] do
+			tTextFields[k]["contents"][n] = ""
 		end
 	end
-end
-
-function getText(bReturn)
-	local nWidth, nHeight = term.getSize()
-	local tTextOutputs = {}
+	
 	local nActiveField = 1
-	for n = 1, #tTextFields do
-		tTextOutputs[n] = ""
-		slowPrint(">" .. string.rep(" ", nWidth - 1), 1, tTextFields[n][1])
-	end
-	term.setCursorBlink(true)
-	term.setCursorPos(3, tTextFields[1][1])
+	local nLine = 1
+	
 	local redraw = function()
-		for n = 1, #tTextFields do
-			fastWrite(string.rep(" ", nWidth), 1, tTextFields[n][1])
-			if tTextFields[n][4] == true then
-				fastPrint("> " .. string.rep("*", #tTextOutputs[n]), 1)
-			else
-				fastPrint("> " .. tTextOutputs[n], 1)
+		for _, v in ipairs(tTextFields) do
+			for k, s in ipairs(v["contents"]) do
+				fastWrite(string.rep(" ", v["width"]), v["x"], v["y"] + (k - 1))
+				if v["hidden"] == true then
+					fastWrite(string.rep("*", #s), v["x"], v["y"] + (k - 1))
+				else
+					fastWrite(s, v["x"], v["y"] + (k - 1))
+				end
 			end
-		end	
-		if #tTextOutputs[nActiveField] < tTextFields[nActiveField][3] then
-			term.setCursorPos(#tTextOutputs[nActiveField] + 3, tTextFields[nActiveField][1])
+		end
+		if #tTextFields[nActiveField]["contents"][nLine] < tTextFields[nActiveField]["width"] then
+			term.setCursorPos(tTextFields[nActiveField]["x"] + #tTextFields[nActiveField]["contents"][nLine], tTextFields[nActiveField]["y"] + (nLine - 1))
 		else
-			term.setCursorPos(#tTextOutputs[nActiveField] + 2, tTextFields[nActiveField][1])
+			term.setCursorPos(tTextFields[nActiveField]["x"] + #tTextFields[nActiveField]["contents"][nLine] - 1, tTextFields[nActiveField]["y"] + (nLine - 1))
+		end
+		if tTextFields[nActiveField]["editable"] then
+			term.setCursorBlink(true)
+		else
+			term.setCursorBlink(false)
 		end
 	end
+	
+	term.setCursorPos(tTextFields[1]["x"], tTextFields[1]["y"])
 	while true do
+		redraw()
 		local sEvent, param = os.pullEvent()
 		if sEvent == "char" then
-			if #tTextOutputs[nActiveField] < tTextFields[nActiveField][3] and string.find(param, tTextFields[nActiveField][2]) and not string.find(param, "£") then
-				tTextOutputs[nActiveField] = tTextOutputs[nActiveField] .. param
-				redraw()
+			if #tTextFields[nActiveField]["contents"][nLine] < tTextFields[nActiveField]["width"] and string.find(param, tTextFields[nActiveField]["pattern"]) and not string.find(param, "£") then
+				tTextFields[nActiveField]["contents"][nLine] = tTextFields[nActiveField]["contents"][nLine] .. param
 			end
 		elseif sEvent == "key" then
-			if param == 28 then
-				tTextFields = {}
+			if param == 28 then --enter
 				term.setCursorBlink(false)
-				return tTextOutputs
-			elseif param == 199 then
+				return tTextFields
+			elseif param == 199 then --home
 				if bReturn == true then
-					tTextFields = {}
 					term.setCursorBlink(false)
 					return nil
 				end
-			elseif param == 14 then
-				if #tTextOutputs[nActiveField] > 0 then
-					tTextOutputs[nActiveField] = string.sub(tTextOutputs[nActiveField], 1, #tTextOutputs[nActiveField] - 1)
-					redraw()
+			elseif param == 14 then --backspace
+				if #tTextFields[nActiveField]["contents"][nLine] > 0 then
+					tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, #tTextFields[nActiveField]["contents"][nLine] - 1)
 				end
-			elseif param == 15 then
+			elseif param == 15 then --tab
 				if tTextFields[nActiveField + 1] then
 					nActiveField = nActiveField + 1
-					redraw()
 				else
 					nActiveField = 1
-					redraw()
 				end
-			elseif param == 200 then
-				if tTextFields[nActiveField - 1] then
-					nActiveField = nActiveField - 1
-					redraw()
+			elseif param == 200 then --up
+				if nLine > 1 then
+					nLine = nLine - 1
 				end
-			elseif param == 208 then
-				if tTextFields[nActiveField + 1] then
-					nActiveField = nActiveField + 1
-					redraw()
+			elseif param == 208 then --down
+				if tTextFields[nActiveField]["height"] > nLine then
+					nLine = nLine + 1
 				end
 			end
 		end

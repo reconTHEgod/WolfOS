@@ -4,12 +4,15 @@ Please ask for permission before attempting to redistribute any code relating to
 
 WUI.clear("Startup Menu")
 WUI.slowPrint("Please enter your User Account ID:", 1, 4)
-WUI.registerTextField(6, "[%w%.%-_]", 16, false)
+WUI.slowPrint(">", 1, 6)
 WUI.slowPrint("Please enter your Passcode:", 1, 8)
-WUI.registerTextField(10, "%w", 16, true)
-local t = WUI.getText(true)
+WUI.slowPrint(">", 1, 10)
+local t = WUI.getText({
+	{["x"] = 3, ["y"] = 6, ["width"] = 16, ["height"] = 1, ["pattern"] = "[%w%.%-_]", ["hidden"] = false, ["editable"] = true},
+	{["x"] = 3, ["y"] = 10, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}
+}, true)
 if t then
-	local sUserInput, sPassInput = t[1], t[2]
+	local sUserInput, sPassInput = t[1]["contents"][1], t[2]["contents"][1]
 	local tUser, p1, p2 = WAU.checkLogin(sUserInput, hash.sha256(sPassInput))
 	WUI.clear("Startup Menu")
 	if tUser then
