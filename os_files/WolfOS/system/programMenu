@@ -2,25 +2,19 @@
 --[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
-local bMenuLoop = true
 local tChoices = {}
 local tActions = {}
 local sUser = WDM.readSystemTemp("current_user")
-repeat
-	local tAll = WDM.list(WDM.getSystemDir("programs"))
-	for nItem = 1, #tAll do
-		if string.sub(tAll[nItem], #tAll[nItem] - 4) == ".prog" then
-			local sName = WDM.deCamelCase(string.sub(tAll[nItem], 1, #tAll[nItem] - 5))
-			table.insert(tChoices, sName)
-		end
+local tAll = WDM.list(WDM.getSystemDir("programs"))
+for _, v in ipairs(tAll) do
+	if string.sub(v, #v - 4) == ".prog" then
+		local sName = WDM.deCamelCase(string.sub(v, 1, #v - 5))
+		table.insert(tChoices, {["display"] = sName, ["id"] = string.sub(v, 1, #v - 5), ["selectable"] = true})
 	end
-	local sSelection = WUI.menu(tChoices, "Welcome '" .. sUser .. "'!", "Program Menu", true)		
-	if sSelection == "Return" then
-		bMenuLoop = false
-		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
-	else
-		bMenuLoop = false
-		local sName = WDM.camelCase(sSelection)
-		os.run({}, WDM.getSystemDir("programs") .. sName .. ".prog/" .. sName)
-	end
-until bMenuLoop == false
+end
+local sSelection = WUI.menu(tChoices, "Welcome '" .. sUser .. "'!", "Program Menu", true)		
+if sSelection == "return" then
+	os.run({}, WDM.getSystemDir("system") .. "mainMenu")
+else
+	os.run({}, WDM.getSystemDir("programs") .. sSelection .. ".prog/" .. sSelection)
+end

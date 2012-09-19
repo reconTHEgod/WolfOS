@@ -3,16 +3,20 @@
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
 local getSide = function()
-	local tChoices = {}
-	for _, sSide in ipairs(WPH.getValidSides()) do
-		if WPH.getType(sSide) == "drive" and disk.hasAudio(sSide) then
-			local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
-			table.insert(tChoices, sSide)
+	while true do
+		local tChoices = {}
+		for _, sSide in ipairs(WPH.getValidSides()) do
+			if WPH.getType(sSide) == "drive" and disk.hasAudio(sSide) then
+				local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
+				table.insert(tChoices, {["display"] = sSide, ["id"] = string.lower(sSide), ["selectable"] = true})
+			end
 		end
-	end
-	local sSelection = WUI.menu(tChoices, "Select drive:", "Music Player", true)
-	if sSelection ~= "Return" then
-		return string.lower(sSelection)
+		local sSelection = WUI.menu(tChoices, "Select a drive:", "Music Player", true, {["disk"] = WPH.getValidSides(), ["disk_eject"] = WPH.getValidSides()})
+		if sSelection == "return" then
+			break
+		elseif sSelection ~= "disk" and sSelection ~= "disk_eject" then
+			return sSelection
+		end
 	end
 	return nil
 end
@@ -21,9 +25,14 @@ local bMenuLoop = true
 local sPlaying = ""
 local sPlayingSide = ""
 while bMenuLoop == true do
-	local tChoices = {"Play Disk", "Stop Disk", "\\", "Eject Disk"}
+	local tChoices = {
+		{["display"] = "Play Disk", ["id"] = "play_disk", ["selectable"] = true},
+		{["display"] = "Stop Disk", ["id"] = "stop_disk", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Eject Disk", ["id"] = "eject_disk", ["selectable"] = true}
+	}
 	local tActions = {
-		["Play Disk"] = function()
+		["play_disk"] = function()
 			local sDrive = getSide()
 			if sDrive then
 				if disk.hasAudio(sDrive) then
@@ -36,12 +45,12 @@ while bMenuLoop == true do
 				end
 			end
 		end,
-		["Stop Disk"] = function()
+		["stop_disk"] = function()
 			sPlaying = ""
 			sPlayingSide = ""
 			disk.stopAudio()
 		end,
-		["Eject Disk"] = function()
+		["eject_disk"] = function()
 			local sSide = getSide()
 			if sSide then
 				disk.eject(sSide)
@@ -51,11 +60,11 @@ while bMenuLoop == true do
 				end
 			end
 		end,
-		["Return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end
+		["return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end
 	}
 	local sSelection, p1 = WUI.menu(tChoices, "Now Playing: " .. sPlaying, "Music Player", true, {["disk_eject"] = sPlayingSide})
 	if sSelection == "disk_eject" then
-		tActions["Stop Disk"]()
+		tActions["stop_disk"]()
 	else
 		tActions[sSelection]()
 	end

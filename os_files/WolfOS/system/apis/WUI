@@ -13,7 +13,7 @@ local function getAlignment(sText, sAxis, sAlign)
 	if sAxis == "x" then
 		if sAlign == "left" then
 			return 1
-		elseif sAlign == "centre" then
+		elseif sAlign == "center" then
 			return math.floor(nWidth / 2) - math.floor(string.len(sText) / 2) + 1
 		elseif sAlign == "right" then
 			return nWidth - string.len(sText) + 1
@@ -23,7 +23,7 @@ local function getAlignment(sText, sAxis, sAlign)
 	elseif sAxis == "y" then
 		if sAlign == "top" then
 			return 1
-		elseif sAlign == "centre" then
+		elseif sAlign == "center" then
 			return math.floor(nHeight / 2)
 		elseif sAlign == "bottom" then
 			return nHeight
@@ -149,7 +149,7 @@ function setupClock()
 				sTime = string.rep(" ", 8 - #sNewTime) .. sNewTime
 				if WUI.checkClock() then
 					local x, y = term.getCursorPos()
-					WUI.fastWrite(sTime, "right", "top")
+					WUI.fastWrite(sTime, "center", "top")
 					term.setCursorPos(x, y)
 				end
 			end
@@ -172,21 +172,26 @@ function hideClock()
 end
 
 function clear(sProgram)
+	if #sProgram > 19 then sProgram = string.sub(sProgram, 1, 16) .. "..." end
 	local nWidth = term.getSize()
 	local sClock = textutils.formatTime(os.time(), false)
 	if not bShowClock then sClock = "" end
+	local sUser = ""
+	if WDM then sUser = WDM.readSystemTemp("current_user") or "" end
 	term.clear()
 	if sProgram ~= tClearStack[#tClearStack] then
 		local bClock = bShowClock
 		bShowClock = false
 		sleep(0.1)
 		slowWrite(sProgram, "left", "top")
-		slowWrite(sClock, "right", "top")
+		slowWrite(sClock, "center", "top")
 		bShowClock = bClock
+		slowWrite(sUser, "right", "top")
 		slowWrite(string.rep("-", nWidth), "left", 2)
 	else
 		fastWrite(sProgram, "left", "top")
-		fastWrite(sClock, "right", "top")
+		fastWrite(sClock, "center", "top")
+		fastWrite(sUser, "right", "top")
 		fastWrite(string.rep("-", nWidth), "left", 2)
 	end
 	tClearStack = {sProgram}
@@ -196,8 +201,8 @@ end
 function bootScreen(sLine1, sLine2)
 	bShowClock = false
 	term.clear()
-	slowPrint(sLine1, "centre", "centre")
-	slowPrint(sLine2, "centre")
+	slowPrint(sLine1, "center", "center")
+	slowPrint(sLine2, "center")
 	slowWrite("toxic.wolf@hotmail.co.uk", "right", "bottom")
 	sleep(3)
 	term.clear()
@@ -232,40 +237,22 @@ function reboot()
 end
 
 function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
-	local bReturn = bReturn or false
 	if bReturn == true then
 		if #tChoices > 0 then
-			table.insert(tChoices, "\\")
+			table.insert(tChoices, {["display"] = "", ["selectable"] = false})
 		end
-		table.insert(tChoices, "Return")
+		table.insert(tChoices, {["display"] = "Return", ["id"] = "return", ["selectable"] = true})
 	end	
-	local tOptions = {}
+	
 	local n = 1
-	local i = 1
 	repeat
-		if string.sub(tChoices[n], 1, 1) == "@" then
-			if WDM.readSystemTemp("current_type") == "admin" then
-				tChoices[n] = string.sub(tChoices[n], 2)
-			else
-				table.remove(tChoices, n)
-				n = n - 1
-			end
-		elseif string.sub(tChoices[n], 1, 1) == "~" then
-			if WDM.readSystemTemp("current_type") == "user" then
-				tChoices[n] = string.sub(tChoices[n], 2)
-			else
-				table.remove(tChoices, n)
-				n = n - 1
-			end
-		end
+		if (tChoices[n]["type"] and not tChoices[n]["type"] == WDM.readSystemTemp("current_type")) then
+			table.remove(tChoices, n)
+		else
 		n = n + 1
-	until n > #tChoices
-	for n = 1, #tChoices do
-		if string.sub(tChoices[n], 1, 1) ~= "\\" then
-			tOptions[i] = tChoices[n]
-			i = i + 1
 		end
-	end
+	until n > #tChoices
+	
 	local nWidth, nHeight = term.getSize()
 	local nMaxDisplay = nHeight - 5
 	local nScroll = 0
@@ -273,13 +260,10 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
 	local nSelection = 1
 	local nPosY = 1
 	local bFirst = true
-	while string.sub(tChoices[nPosY + nScroll], 1, 1) == "\\" do
-		nPosY = nPosY + 1
-	end
+	
 	local function redraw()
 		clear(sProgram)
-		if bFirst == true then slowPrint(sMenuTitle) else fastPrint(sMenuTitle) end
-		fastPrint("")
+		if bFirst == true then slowPrint(sMenuTitle .. " \n") else fastPrint(sMenuTitle .. " \n") end
 		for nLine = 1, math.min(nMaxDisplay, #tChoices) do
 			local sLine = "  "
 			if nPosY == nLine then
@@ -290,79 +274,73 @@ function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
 			elseif nLine == nMaxDisplay and nScrollMax > 0 then
 				sLine = "v"
 			else
-				if string.sub(tChoices[nLine + nScroll], 1, 1) == "\\" then
-					sLine = sLine .. string.sub(tChoices[nLine + nScroll], 2)
-				else
-					sLine = sLine .. tChoices[nLine + nScroll]
-				end
+				sLine = sLine .. tChoices[nLine + nScroll]["display"]
 			end
 			if bFirst == true then slowWrite(sLine, 1, nLine + 5) else fastWrite(sLine, 1, nLine + 5) end
 		end
+		bFirst = false
+	end
+	
+	local function move(sDirection)
+		if sDirection == "down" then
+			for n = nSelection + 1, #tChoices, 1 do
+				if tChoices[n]["selectable"] then
+					if nPosY == nMaxDisplay - 1 and nScrollMax > 0 then
+						nScroll = nScroll + (n - nSelection)
+						nScrollMax = nScrollMax - (n - nSelection)
+					elseif nPosY < nMaxDisplay then
+						nPosY = nPosY + (n - nSelection)
+					end
+					nSelection = n
+					return true
+				end
+			end
+		elseif sDirection == "up" then
+			for n = nSelection - 1, 1, -1 do
+				if tChoices[n]["selectable"] then
+					if nPosY == 2 and nScroll > 0 then
+						nScroll = nScroll - (nSelection - n)
+						nScrollMax = nScrollMax + (nSelection - n)
+					elseif nPosY > 1 then
+						nPosY = nPosY - (nSelection - n)
+					end
+					nSelection = n
+					return true
+				end
+			end
+		end
+	end
+	
+	while not tChoices[nSelection]["selectable"] do
+		move("down")
 	end
 	while true do
 		redraw()
-		bFirst = false
 		local sEvent = nil
 		repeat
 			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
 		until sEvent == "key" or (tEventFilters and tEventFilters[sEvent])
 		if sEvent == "key" and p1 == 200 then
-			if tOptions[nSelection - 1] then
-				nSelection = nSelection - 1
-				repeat
-					if nPosY == 2 and nScroll > 0 then
-						nScroll = nScroll - 1
-						nScrollMax = nScrollMax + 1
-					elseif nPosY > 1 then
-						nPosY = nPosY - 1
-					end
-				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
-			end
+			move("up")
 		elseif sEvent == "key" and p1 == 208 then
-			if tOptions[nSelection + 1] then
-				nSelection = nSelection + 1
-				repeat
-					if nPosY == nMaxDisplay - 1 and nScrollMax > 0 then
-						nScroll = nScroll + 1
-						nScrollMax = nScrollMax - 1
-					elseif nPosY < nMaxDisplay then
-						nPosY = nPosY + 1
-					end
-				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
-			end
+			move("down")
 		elseif sEvent == "key" and p1 == 201 then
-			while tOptions[nSelection - 1] do
-				nSelection = nSelection - 1
-				repeat
-					if nPosY == 2 and nScroll > 0 then
-						nScroll = nScroll - 1
-						nScrollMax = nScrollMax + 1
-					elseif nPosY > 1 then
-						nPosY = nPosY - 1
-					end
-				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
+			while tChoices[nSelection - 1] do
+				if not move("up") then break end
 			end
 		elseif sEvent == "key" and p1 == 209 then
-			while tOptions[nSelection + 1] do
-				nSelection = nSelection + 1
-				repeat
-					if nPosY == nMaxDisplay - 1 and nScrollMax > 0 then
-						nScroll = nScroll + 1
-						nScrollMax = nScrollMax - 1
-					elseif nPosY < nMaxDisplay then
-						nPosY = nPosY + 1
-					end
-				until string.sub(tChoices[nPosY + nScroll], 1, 1) ~= "\\"
+			while tChoices[nSelection + 1] do
+				if not move("down") then break end
 			end
 		elseif sEvent == "key" and p1 == 28 then
-			if nSelection == #tOptions and bReturn == true then
-				return "Return", 0
-			elseif tOptions[nSelection] then
-				return tOptions[nSelection], nSelection
+			if tChoices[nSelection]["id"] == "return" and bReturn == true then
+				return "return", 0
+			elseif tChoices[nSelection] then
+				return tChoices[nSelection]["id"], nSelection
 			end
 		elseif sEvent == "key" and p1 == 14 then
 			if bReturn == true then
-				return "Return", 0
+				return "return", 0
 			end
 		elseif tEventFilters and tEventFilters[sEvent] then
 			if type(tEventFilters[sEvent]) == "table" then

@@ -4,11 +4,16 @@ Please ask for permission before attempting to redistribute any code relating to
 
 local bMenuLoop = true
 while bMenuLoop == true do
-	local tChoices = {"Login", "\\", "Reboot", "Shutdown"}
+	local tChoices = {
+		{["display"] = "Login", ["id"] = "login", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Reboot", ["id"] = "reboot", ["selectable"] = true},
+		{["display"] = "Shutdown", ["id"] = "shutdown", ["selectable"] = true}
+	}
 	local tActions = {
-		["Login"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "login") end,
-		["Reboot"] = function() bMenuLoop = false WUI.reboot() end,
-		["Shutdown"] = function() bMenuLoop = false WUI.shutdown() end
+		["login"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "login") end,
+		["reboot"] = function() bMenuLoop = false WUI.reboot() end,
+		["shutdown"] = function() bMenuLoop = false WUI.shutdown() end
 	}
 	local sSelection = WUI.menu(tChoices, "Welcome User!", "Startup Menu")
 	tActions[sSelection]()

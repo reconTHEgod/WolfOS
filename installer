@@ -31,8 +31,8 @@ local function redraw()
 end
 
 local function installFile(sLocation, sPath, sName)
-	local sPath = string.gmatch(sPath, "os_files/([%w%_%.% %-%+%,%;%:%*%#%=%/]+)")()
-	local sDir = string.gmatch(sPath, "([%w%_%.% %-%+%,%;%:%*%#%=%/]+)/" .. sName .. "$")()
+	sPath = string.gmatch(sPath, "os_files/([%w%_%.% %-%+%,%;%:%*%#%=%/]+)")()
+	sDir = string.gmatch(sPath, "([%w%_%.% %-%+%,%;%:%*%#%=%/]+)/" .. sName .. "$")()
 	if sDir ~= nil and not fs.isDir(sDir) then
 		fs.makeDir(sDir)
 	end
@@ -124,7 +124,7 @@ end
 local bAPICheck = false
 local hFile = nil
 if bStandalone then
-	installFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/os_files/WolfOS/system/apis/WUI", "/os_files/WolfOS/system/apis/WUI", "WUI")
+	downloadFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/os_files/WolfOS/system/apis/WUI", "/os_files/WolfOS/system/apis/WUI", "WUI")
 	bAPICheck = os.loadAPI("/WolfOS/system/apis/WUI")
 	hFile = fs.open("/WolfOS/system/apis/WUI", "r")
 else
@@ -142,19 +142,27 @@ WUI.bootScreen("Initiating WolfOS Installer", "Please wait...")
 
 local tChoices
 if bStandalone then
-	tChoices = {"Download and install latest WolfOS version", "\\", "Exit"}
+	tChoices = {
+		{["display"] = "Download and install latest WolfOS version", ["id"] = "online", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Exit", ["id"] = "exit", ["selectable"] = true}
+	}
 else
-	tChoices = {"Install WolfOS offline", "\\", "Exit"}
+	tChoices = {
+		{["display"] = "Install WolfOS offline", ["id"] = "offline", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Exit", ["id"] = "exit", ["selectable"] = true}
+	}
 	if http then
-		table.insert(tChoices, 1, "Install WolfOS and download updates")
+		table.insert(tChoices, 1, {["display"] = "Install WolfOS and download updates", ["id"] = "online", ["selectable"] = true})
 	end
 end
 
 local sSelection = WUI.menu(tChoices, "WolfOS " .. sVer, "WolfOS Installer")
 
-if sSelection == "Exit" then
+if sSelection == "exit" then
 	os.shutdown()
-elseif sSelection == "Install WolfOS and download updates" then
+elseif sSelection == "online" then
 	bOnline = true
 end
 

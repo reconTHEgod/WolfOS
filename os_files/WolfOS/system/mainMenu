@@ -5,14 +5,23 @@ Please ask for permission before attempting to redistribute any code relating to
 local bMenuLoop = true
 local sUser = WDM.readSystemTemp("current_user")
 while bMenuLoop == true do
-	local tChoices = {"Programs", "Utilities", "Control Panel", "\\", "Logout", "\\", "Reboot", "Shutdown"}
+	local tChoices = {
+		{["display"] = "Programs", ["id"] = "programs", ["selectable"] = true},
+		{["display"] = "Utilities", ["id"] = "utilities", ["selectable"] = true},
+		{["display"] = "Control Panel", ["id"] = "control_panel", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Logout", ["id"] = "logout", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Reboot", ["id"] = "reboot", ["selectable"] = true},
+		{["display"] = "Shutdown", ["id"] = "shutdown", ["selectable"] = true}
+	}
 	local tActions = {
-		["Programs"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end,
-		["Utilities"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "utilityMenu") end,
-		["Control Panel"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "controlPanel") end,
-		["Logout"] = function() bMenuLoop = false WUI.logout() end,
-		["Reboot"] = function() bMenuLoop = false WUI.reboot() end,
-		["Shutdown"] = function() bMenuLoop = false WUI.shutdown() end
+		["programs"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end,
+		["utilities"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "utilityMenu") end,
+		["control_panel"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "controlPanel") end,
+		["logout"] = function() bMenuLoop = false WUI.logout() end,
+		["reboot"] = function() bMenuLoop = false WUI.reboot() end,
+		["shutdown"] = function() bMenuLoop = false WUI.shutdown() end
 	}
 	local sSelection = WUI.menu(tChoices, "Welcome '" .. sUser .. "'!", "Main Menu")
 	tActions[sSelection]()
