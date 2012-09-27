@@ -124,7 +124,7 @@ end
 local bAPICheck = false
 local hFile = nil
 if bStandalone then
-	downloadFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/os_files/WolfOS/system/apis/WUI", "/os_files/WolfOS/system/apis/WUI", "WUI")
+	installFile("https://raw.github.com/"..sGitUser.."/"..sGitRepo.."/"..sGitBranch.."/os_files/WolfOS/system/apis/WUI", "/os_files/WolfOS/system/apis/WUI", "WUI")
 	bAPICheck = os.loadAPI("/WolfOS/system/apis/WUI")
 	hFile = fs.open("/WolfOS/system/apis/WUI", "r")
 else
