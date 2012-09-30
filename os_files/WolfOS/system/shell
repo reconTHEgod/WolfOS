@@ -37,10 +37,9 @@ if sMonitorPort then
 	if WPH.getType(sMonitorPort) ~= "monitor" then
 		WDM.writeSystemData(nil, "monitor_port")
 	elseif WDM.readSystemData("monitor_state") and WPH.getType(sMonitorPort) == "monitor" then
-		print("Initiating monitor...")
-		term.redirect(peripheral.wrap(sMonitorPort))
+		sync.redirect(true)
 		print("Synchronising with monitor...")
-		term.syncScreens(true)
+		sync.addMonitor(sMonitorPort)
 	end
 end
 print("Starting WolfOS...")
@@ -72,4 +71,5 @@ local runCoreModule = function()
 		end
 	end
 end
+	
 parallel.waitForAny(runOS, runClock, runCoreModule, unpack(tModules))
