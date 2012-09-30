@@ -209,6 +209,7 @@ function bootScreen(sLine1, sLine2)
 end
 
 function logout()
+	WDM.writeSystemTemp("", "current_user")
 	clear("Startup Menu")
 	for _, sSide in ipairs(WPH.getValidSides()) do
 		disk.stopAudio(sSide)
@@ -375,58 +376,71 @@ end
 
 function getText(tTextFields, bReturn)
 	for k in ipairs(tTextFields) do
-		tTextFields[k]["contents"] = {}
-		for n = 1, tTextFields[k]["height"] do
-			tTextFields[k]["contents"][n] = ""
+		tTextFields[k]["line"] = 1
+		tTextFields[k]["scroll"] = 0
+		tTextFields[k]["xpos"] = 1
+		tTextFields[k]["ypos"] = 1
+		if not tTextFields[k]["lines"] then
+			tTextFields[k]["lines"] = tTextFields[k]["height"]
+		end
+		if not tTextFields[k]["contents"] then tTextFields[k]["contents"] = {} end
+		for n = 1, tTextFields[k]["lines"] do
+			if not tTextFields[k]["contents"][n] then tTextFields[k]["contents"][n] = "" end
 		end
 	end
 	
-	local nActiveField = 1
-	local nLine = 1
+	local nActiveField, nLine = 1, 1
+	local nScroll = 0
+	local nXPos, nYPos = 1, 1
 	
 	local redraw = function()
+		term.setCursorBlink(false)
+		nLine = tTextFields[nActiveField]["line"]
+		nScroll = tTextFields[nActiveField]["scroll"]
+		nXPos = tTextFields[nActiveField]["xpos"]
+		nYPos = tTextFields[nActiveField]["ypos"]
+		fastWrite("Scroll: " .. nScroll .. ", Scroll Max: " .. tTextFields[nActiveField]["lines"] - (tTextFields[nActiveField]["height"] - 1) - 1 .. ", Line: " .. nLine .. ", Lines: " .. tTextFields[nActiveField]["lines"] .. "     ", 1, 19)
 		for _, v in ipairs(tTextFields) do
-			for k, s in ipairs(v["contents"]) do
-				fastWrite(string.rep(" ", v["width"]), v["x"], v["y"] + (k - 1))
+			local i = v["scroll"]
+			for n = 1, v["height"] do
+				fastWrite(string.rep(" ", v["width"]), v["x"], v["y"] + (n - 1))
 				if v["hidden"] == true then
-					fastWrite(string.rep("*", #s), v["x"], v["y"] + (k - 1))
+					fastWrite(string.rep("*", #v["contents"][n + i]), v["x"], v["y"] + (n - 1))
 				else
-					fastWrite(s, v["x"], v["y"] + (k - 1))
+					fastWrite(v["contents"][n + i], v["x"], v["y"] + (n - 1))
 				end
 			end
 		end
-		if #tTextFields[nActiveField]["contents"][nLine] < tTextFields[nActiveField]["width"] then
-			term.setCursorPos(tTextFields[nActiveField]["x"] + #tTextFields[nActiveField]["contents"][nLine], tTextFields[nActiveField]["y"] + (nLine - 1))
-		else
-			term.setCursorPos(tTextFields[nActiveField]["x"] + #tTextFields[nActiveField]["contents"][nLine] - 1, tTextFields[nActiveField]["y"] + (nLine - 1))
-		end
+		term.setCursorPos(tTextFields[nActiveField]["x"] + (nXPos - 1), tTextFields[nActiveField]["y"] + (nYPos - 1))
 		if tTextFields[nActiveField]["editable"] then
 			term.setCursorBlink(true)
-		else
-			term.setCursorBlink(false)
 		end
 	end
 	
 	term.setCursorPos(tTextFields[1]["x"], tTextFields[1]["y"])
 	while true do
 		redraw()
-		local sEvent, param = os.pullEvent()
-		if sEvent == "char" then
+		local sEvent, param
+		repeat
+			sEvent, param = os.pullEvent()
+		until sEvent == "key" or sEvent == "char"
+		if sEvent == "char" and tTextFields[nActiveField]["editable"] then
 			if #tTextFields[nActiveField]["contents"][nLine] < tTextFields[nActiveField]["width"] and string.find(param, tTextFields[nActiveField]["pattern"]) and not string.find(param, "£") then
-				tTextFields[nActiveField]["contents"][nLine] = tTextFields[nActiveField]["contents"][nLine] .. param
+				tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, nXPos - 1) .. param .. string.sub(tTextFields[nActiveField]["contents"][nLine], nXPos)
+				tTextFields[nActiveField]["xpos"] = nXPos + 1
 			end
 		elseif sEvent == "key" then
 			if param == 28 then --enter
 				term.setCursorBlink(false)
 				return tTextFields
-			elseif param == 199 then --home
-				if bReturn == true then
-					term.setCursorBlink(false)
-					return nil
+			elseif param == 14 and tTextFields[nActiveField]["editable"] then --backspace
+				if #tTextFields[nActiveField]["contents"][nLine] > 0 and nXPos > 1 then
+					tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, nXPos - 2) .. string.sub(tTextFields[nActiveField]["contents"][nLine], nXPos)
+					tTextFields[nActiveField]["xpos"] = nXPos - 1
 				end
-			elseif param == 14 then --backspace
+			elseif param == 211 and tTextFields[nActiveField]["editable"] then --delete
 				if #tTextFields[nActiveField]["contents"][nLine] > 0 then
-					tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, #tTextFields[nActiveField]["contents"][nLine] - 1)
+					tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, nXPos - 1) .. string.sub(tTextFields[nActiveField]["contents"][nLine], nXPos + 1)
 				end
 			elseif param == 15 then --tab
 				if tTextFields[nActiveField + 1] then
@@ -435,13 +449,53 @@ function getText(tTextFields, bReturn)
 					nActiveField = 1
 				end
 			elseif param == 200 then --up
-				if nLine > 1 then
-					nLine = nLine - 1
+				if tTextFields[nActiveField]["editable"] then
+					if nLine > 1 then
+						if nYPos == 1 then 
+							tTextFields[nActiveField]["scroll"] = nScroll - 1
+						else
+							tTextFields[nActiveField]["ypos"] = nYPos - 1
+						end
+						tTextFields[nActiveField]["line"] = nLine - 1
+						tTextFields[nActiveField]["xpos"] = math.min(nXPos, #tTextFields[nActiveField]["contents"][nLine - 1] + 1)
+					end
+				elseif nScroll > 0 then
+					tTextFields[nActiveField]["scroll"] = nScroll - 1
 				end
 			elseif param == 208 then --down
-				if tTextFields[nActiveField]["height"] > nLine then
-					nLine = nLine + 1
+				if tTextFields[nActiveField]["editable"] then
+					if nLine < tTextFields[nActiveField]["lines"] then
+						if nYPos == tTextFields[nActiveField]["height"] then 
+							tTextFields[nActiveField]["scroll"] = nScroll + 1
+						else
+							tTextFields[nActiveField]["ypos"] = nYPos + 1
+						end
+						tTextFields[nActiveField]["line"] = nLine + 1
+						tTextFields[nActiveField]["xpos"] = math.min(nXPos, #tTextFields[nActiveField]["contents"][nLine + 1] + 1)
+					end
+				elseif nScroll < (tTextFields[nActiveField]["lines"] - (tTextFields[nActiveField]["height"] - 1) - 1) then
+					tTextFields[nActiveField]["scroll"] = nScroll + 1
 				end
+			elseif param == 203 then --left
+				if nXPos > 1 then
+					tTextFields[nActiveField]["xpos"] = nXPos - 1
+				end
+			elseif param == 205 then --right
+				if nXPos < (#tTextFields[nActiveField]["contents"][nLine] + 1) then
+					tTextFields[nActiveField]["xpos"] = nXPos + 1
+				end
+			elseif param == 199 then --home
+				tTextFields[nActiveField]["xpos"] = 1
+			elseif param == 207 then --end
+				tTextFields[nActiveField]["xpos"] = #tTextFields[nActiveField]["contents"][nLine] + 1
+			elseif param == 201 then --pageup
+				tTextFields[nActiveField]["scroll"] = 0
+				tTextFields[nActiveField]["ypos"] = 1
+				tTextFields[nActiveField]["line"] = 1
+			elseif param == 209 then --pagedown
+				tTextFields[nActiveField]["scroll"] = tTextFields[nActiveField]["lines"] - (tTextFields[nActiveField]["height"] - 1) - 1
+				tTextFields[nActiveField]["ypos"] = tTextFields[nActiveField]["height"]
+				tTextFields[nActiveField]["line"] = tTextFields[nActiveField]["lines"]
 			end
 		end
 	end
