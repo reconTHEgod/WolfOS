@@ -1,0 +1,100 @@
+--1.4.0_b6
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+--Display Settings
+
+local tMonitors = {}
+local bMenuLoop = true
+
+local getSide = function(sFilter, bInc)
+	while true do
+		local tChoices = {}
+		for _, sSide in ipairs(sFilter) do
+			local b, n = WDM.matchFromTable(sSide, tMonitors)
+			if WPH.getType(sSide) == "monitor" then
+				local sSide = string.upper(string.sub(sSide, 1, 1)) .. string.sub(sSide, 2)
+				table.insert(tChoices, {["display"] = sSide, ["id"] = string.lower(sSide), ["selectable"] = true})
+			elseif b then
+				table.remove(tMonitors, n)
+				WDM.writeSystemData(tMonitors, "monitors")
+			end
+		end
+		local sSelection = WUI.menu(tChoices, "Display Ports", "Control Panel", true, {["peripheral"] = WPH.getValidSides(), ["peripheral_detach"] = WPH.getValidSides()})
+		if sSelection == "return" then
+			break
+		elseif sSelection ~= "peripheral" and sSelection ~= "peripheral_detach" then
+			return sSelection
+		end
+	end
+	return nil
+end
+
+while bMenuLoop == true do
+	tMonitors = WDM.readSystemData("monitors")
+	local tChoices = {}
+	if #tMonitors < #WPH.getAllPeripherals("monitor") then
+		table.insert(tChoices, {["display"] = "Add monitor", ["id"] = "add_monitor", ["selectable"] = true})
+	end
+	if #tMonitors > 0 then
+		table.insert(tChoices, {["display"] = "Remove monitor", ["id"] = "del_monitor", ["selectable"] = true})
+	end
+	table.insert(tChoices, {["display"] = "", ["selectable"] = false})
+	if not WDM.readSystemData("clock_mode") then
+		table.insert(tChoices, {["display"] = "Twenty-four hour clock", ["id"] = "clock_24", ["selectable"] = true})
+	else
+		table.insert(tChoices, {["display"] = "Twelve hour clock", ["id"] = "clock_12", ["selectable"] = true})
+	end
+	table.insert(tChoices, {["display"] = "", ["selectable"] = false})
+	if not WDM.readSystemData("instant_print") then
+		table.insert(tChoices, {["display"] = "No UI animation", ["id"] = "i_print", ["selectable"] = true})
+	else
+		table.insert(tChoices, {["display"] = "UI animation", ["id"] = "s_print", ["selectable"] = true})
+	end
+
+	local tActions = {
+		["add_monitor"] = function()
+			local t = {}
+			for _, v in ipairs(WPH.getAllPeripherals("monitor")) do
+				if not WDM.matchFromTable(v.port, tMonitors) then
+					table.insert(t, v.port)
+				end
+			end
+			local sSide = getSide(t)
+			if sSide then
+				table.insert(tMonitors, sSide)
+				WDM.writeSystemData(tMonitors, "monitors")
+				sync.addMonitor(sSide)
+			end
+		end,
+		["del_monitor"] = function()
+			local sSide = getSide(tMonitors)
+			if sSide then
+				local _, nPos = WDM.matchFromTable(sSide, tMonitors)
+				table.remove(tMonitors, nPos)
+				WDM.writeSystemData(tMonitors, "monitors")
+				term.clear()
+				term.setCursorPos(1, 1)
+				sync.removeMonitor(sSide)
+			end
+		end,
+		["clock_24"] = function()
+			WDM.writeSystemData(true, "clock_mode")
+		end,
+		["clock_12"] = function()
+			WDM.writeSystemData(false, "clock_mode")
+		end,
+		["i_print"] = function()
+			WDM.writeSystemData(true, "instant_print")
+		end,
+		["s_print"] = function()
+			WDM.writeSystemData(false, "instant_print")
+		end,
+		["return"] = function()
+			bMenuLoop = false
+		end
+	}
+	local sSelection = WUI.menu(tChoices, "Display", "Control Panel", true)		
+	tActions[sSelection]()
+end
+os.run({}, WDM.getSystemDir("control_panel") .. "main")

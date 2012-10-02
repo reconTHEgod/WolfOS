@@ -11,11 +11,11 @@ end
 
 getType = peripheral.getType
 
-function getAllPeripherals()
+function getAllPeripherals(sFilter)
 	local tPeripherals = {}
 	for _, sSide in ipairs(getValidSides()) do
-		if peripheral.isPresent(sSide) then
-			tPeripherals[sSide] = getType(sSide)
+		if peripheral.isPresent(sSide) and (getType(sSide) == sFilter or sFilter == nil) then
+			tPeripherals[#tPeripherals + 1] = {["port"] = sSide, ["type"] = getType(sSide)}
 		end
 	end
 	return tPeripherals

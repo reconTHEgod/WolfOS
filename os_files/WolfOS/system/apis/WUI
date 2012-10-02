@@ -86,6 +86,8 @@ function slowWrite(sString, xPos, yPos, bSleep)
 	local a, b = term.getCursorPos()
 	local x = getAlignment(sString, "x", xPos) or a
 	local y = getAlignment(sString, "y", yPos) or b
+	local bPause = false
+	if WDM then bPause = WDM.readSystemData("instant_print") end
 	term.setCursorPos(x, y)
 	local function newLine()
 		if y + 1 <= nHeight then
@@ -116,7 +118,7 @@ function slowWrite(sString, xPos, yPos, bSleep)
 					term.write(text)
 					text = string.sub(text, (nWidth - x) + 2)
 					x, y = term.getCursorPos()
-					sleep(0.01)
+					if not bPause then sleep(0.01) end
 				end
 			else
 				if (x - 1) + string.len(text) > nWidth then
@@ -124,7 +126,7 @@ function slowWrite(sString, xPos, yPos, bSleep)
 				end
 				term.write(text)
 				x, y = term.getCursorPos()
-				sleep(0.01)
+				if not bPause then sleep(0.01) end
 			end
 		end
 	end
@@ -142,8 +144,10 @@ end
 function setupClock()
 	local clockFunc = function()
 		local sTime = nil
+		local bTime = false
 		while true do
-			local sNewTime = textutils.formatTime(os.time(), false)
+			if WDM then bTime = WDM.readSystemData("clock_mode") end
+			local sNewTime = textutils.formatTime(os.time(), bTime)
 			if sNewTime ~= sTime then
 				sTime = string.rep(" ", 8 - #sNewTime) .. sNewTime
 				if WUI.checkClock() then
@@ -173,12 +177,19 @@ end
 function clear(sProgram)
 	if #sProgram > 19 then sProgram = string.sub(sProgram, 1, 16) .. "..." end
 	local nWidth = term.getSize()
-	local sClock = textutils.formatTime(os.time(), false)
+	local bTime = false
+	if WDM then bTime = WDM.readSystemData("clock_mode") end
+	local sNewTime = textutils.formatTime(os.time(), bTime)
+	local sClock = string.rep(" ", 8 - #sNewTime) .. sNewTime
 	if not bShowClock then sClock = "" end
 	local sUser = ""
-	if WDM then sUser = WDM.readSystemTemp("current_user") or "" end
+	local bSleep = false
+	if WDM then
+		sUser = WDM.readSystemTemp("current_user") or ""
+		bSleep = WDM.readSystemData("instant_print")
+	end
 	term.clear()
-	if sProgram ~= tClearStack[#tClearStack] then
+	if sProgram ~= tClearStack[#tClearStack] and not bSleep then
 		local bClock = bShowClock
 		bShowClock = false
 		sleep(0.1)
