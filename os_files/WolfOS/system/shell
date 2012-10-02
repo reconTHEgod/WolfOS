@@ -32,14 +32,16 @@ for _, sModule in ipairs(fs.list(WDM.getSystemDir("server"))) do
 		print("Server module loaded: " .. sModule)
 	end
 end
-local sMonitorPort = WDM.readSystemData("monitor_port")
-if sMonitorPort then
-	if WPH.getType(sMonitorPort) ~= "monitor" then
-		WDM.writeSystemData(nil, "monitor_port")
-	elseif WDM.readSystemData("monitor_state") and WPH.getType(sMonitorPort) == "monitor" then
-		sync.redirect(true)
+sync.redirect(true)
+local tMonitors = WDM.readSystemData("monitors")
+if not tMonitors then tMonitors = {} WDM.writeSystemData(tMonitors, "monitors") end
+for _, sMonitorPort in ipairs(tMonitors) do
+	local b, n = WDM.matchFromTable(sMonitorPort, tMonitors)
+	if WPH.getType(sMonitorPort) == "monitor" then
 		print("Synchronising with monitor...")
 		sync.addMonitor(sMonitorPort)
+	else
+		table.remove(tMonitors, n)
 	end
 end
 print("Starting WolfOS...")
