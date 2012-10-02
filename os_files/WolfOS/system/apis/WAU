@@ -21,7 +21,7 @@ function generateUID()
 end
 
 function exists(sUser)
-	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+	if not WDM.readSystemData("offline") and WDM.readSystemData("server_id") and not WDM.readServerData("server_state") then
 		WNC.send(WDM.readSystemData("server_id"), "data_request", "user_list")
 		_, _, _, tUsers = WNC.receive(WDM.readSystemData("server_id"), 5)
 	elseif #tUsers == 0 then
@@ -38,18 +38,19 @@ function exists(sUser)
 end
 
 function createUser(sName, sHash)
-	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+	if not WDM.readSystemData("offline") and WDM.readSystemData("server_id") and not WDM.readServerData("server_state") then
 		WNC.send(WDM.readSystemData("server_id"), "data_push", "new_user", sName, sHash)
 	else
 		local sUID = generateUID()
 		tUsers[#tUsers + 1] = {["uid"] = sUID, ["name"] = sName, ["hash"] = sHash, ["type"] = "user"}
 		WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", encryption.toBase64(textutils.serialize(tUsers)))
 		fs.makeDir(WDM.getSystemDir("users") .. sUID .. "/")
+		WDM.fWrite(WDM.getSystemDir("users") .. sUID .. "/email.dat", encryption.toBase64(textutils.serialize({})))
 	end
 end
 
 function removeUser(sUID)
-	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+	if not WDM.readSystemData("offline") and WDM.readSystemData("server_id") and not WDM.readServerData("server_state") then
 		WNC.send(WDM.readSystemData("server_id"), "data_push", "remove_user", sUID)
 	else
 		local tUser, nUser = exists(sUID)
@@ -62,7 +63,7 @@ function removeUser(sUID)
 end
 
 function changeUserData(sUID, sIndex, sString)
-	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+	if not WDM.readSystemData("offline") and WDM.readSystemData("server_id") and not WDM.readServerData("server_state") then
 		WNC.send(WDM.readSystemData("server_id"), "data_push", "update_user", sUID, sIndex, sString)
 	else
 		local tUser, nUser = exists(sUID)
@@ -76,7 +77,7 @@ end
 
 function checkLogin(sName, sHash)
 	local tUser
-	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+	if not WDM.readSystemData("offline") and WDM.readSystemData("server_id") and not WDM.readServerData("server_state") then
 		WNC.send(WDM.readSystemData("server_id"), "connection_request", "user_connection", sName, sHash)
 		local nSenderID, _, sEvent, p1 = WNC.receive(WDM.readSystemData("server_id"), 5)
 		if sEvent ~= "connection_success" then

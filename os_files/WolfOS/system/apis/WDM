@@ -136,7 +136,7 @@ function readSystemTemp(sIndex) -- current_uid, current_user, current_hash, curr
 	return tSystemTemp
 end
 
-function readSystemData(sIndex) -- version, modem_port, modem_state, monitors, offline, server_id, relay_id,
+function readSystemData(sIndex) -- version, modem_port, monitors, offline, server_id, relay_id,
 	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	if sIndex then
 		return tSystemData[sIndex]
