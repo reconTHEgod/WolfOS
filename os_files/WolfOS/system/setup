@@ -6,16 +6,19 @@ WUI.clear("WolfOS Setup")
 WUI.slowPrint("Welcome to WolfOS!\n\nPlease create a User Account to complete the setup.", nil, nil, true)
 
 --Create User Account
-WUI.clear("WolfOS Setup")
 while true do
-	WUI.slowPrint("Please enter a User Account ID:\n")
-	WUI.registerTextField(nil, "[%w%.%-_]", 16, false)
-	WUI.slowPrint("\n\nPlease enter a Passcode:\n")
-	WUI.registerTextField(nil, "%w", 16, true)
-	local t = WUI.getText(false)
+	WUI.clear("WolfOS Setup")
+	WUI.slowPrint("Please enter a User Account ID:", 1, 4)
+	WUI.slowPrint(">", 1, 6)
+	WUI.slowPrint("Please enter a Passcode:", 1, 8)
+	WUI.slowPrint(">", 1, 10)
+	local t = WUI.getText({
+		{["x"] = 3, ["y"] = 6, ["width"] = 16, ["height"] = 1, ["pattern"] = "[%w%.%-_]", ["hidden"] = false, ["editable"] = true},
+		{["x"] = 3, ["y"] = 10, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}
+	})
 	WUI.clear("WolfOS Setup")
 	if t then
-		local sUserInput, sPassInput = t[1], t[2]
+		local sUserInput, sPassInput = t[1]["contents"][1], t[2]["contents"][1]
 		if #sUserInput > 0 and #sPassInput > 7 then
 			if not WDM.exists(WDM.getSystemDir("data") .. "users.dat") then
 				WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", "")
@@ -36,7 +39,7 @@ while true do
 			if #sPassInput < 8 then
 				WUI.slowPrint("Passcodes must be between 8 and 16 characters!")
 			end
-			WUI.slowPrint("")
+			sleep(1.5)
 		end
 	end
 end
