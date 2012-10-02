@@ -18,7 +18,7 @@ while bMenuLoop == true do
 	local tActions = {
 		["programs"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end,
 		["utilities"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "utilityMenu") end,
-		["control_panel"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "controlPanel") end,
+		["control_panel"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("control_panel") .. "main") end,
 		["logout"] = function() bMenuLoop = false WUI.logout() end,
 		["reboot"] = function() bMenuLoop = false WUI.reboot() end,
 		["shutdown"] = function() bMenuLoop = false WUI.shutdown() end

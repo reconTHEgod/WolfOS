@@ -6,9 +6,9 @@ Please ask for permission before attempting to redistribute any code relating to
 
 local _root = "/WolfOS/"
 local _progs, _data, _system, _server = _root .. "programs/", _root .. "data/", _root .. "system/", _root .. "server/"
-local _users = _data .. "users/"
+local _control_panel, _users = _system .. "controlPanel/", _data .. "users/"
 
-local tSystemDirs = {["root"] = _root, ["programs"] = _progs, ["users"] = _users, ["data"] = _data, ["system"] = _system, ["server"] = _server}
+local tSystemDirs = {["root"] = _root, ["programs"] = _progs, ["users"] = _users, ["data"] = _data, ["system"] = _system, ["server"] = _server, ["control_panel"] = _control_panel}
 local tSystemData, tSystemTemp, tServerData, tServerTemp = {}, {}, {}, {}
 local _sIteratorDir, _sIteratorItem = "", ""
 
@@ -136,7 +136,7 @@ function readSystemTemp(sIndex) -- current_uid, current_user, current_hash, curr
 	return tSystemTemp
 end
 
-function readSystemData(sIndex) -- version, modem_port, modem_state, monitor_port, monitor_state, offline, server_id, relay_id,
+function readSystemData(sIndex) -- version, modem_port, modem_state, monitors, offline, server_id, relay_id,
 	if #tSystemData == 0 then tSystemData = textutils.unserialize(encryption.fromBase64(readAllText(tSystemDirs.data .. "system.dat"))) end
 	if sIndex then
 		return tSystemData[sIndex]
