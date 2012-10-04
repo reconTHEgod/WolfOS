@@ -513,11 +513,12 @@ function getText(tTextFields, bReturn)
 end
 
 function correctPass(sProgram, bReturn)
-	slowPrint("Please enter your Passcode: \n")
-	registerTextField(nil, "%w", 16, true)
-	local t = getText(bReturn)
+	slowPrint("Please enter your Passcode:\n")
+	slowWrite(">")
+	local _, y = term.getCursorPos()
+	local t = getText({{["x"] = 3, ["y"] = y, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}})
 	if t then
-		local sPass = t[1]
+		local sPass = t[1]["contents"][1]
 		if hash.sha256(sPass) == WDM.readSystemTemp("current_hash") then
 			return true
 		end
@@ -529,11 +530,12 @@ function correctPass(sProgram, bReturn)
 end
 
 function correctKey(sProgram, sPath, bReturn)
-	slowPrint("Please enter the encryption key: \n")
-	registerTextField(nil, "%w", 16, true)
-	local t = getText(bReturn)
+	slowPrint("Please enter the encryption key:\n")
+	slowWrite(">")
+	local _, y = term.getCursorPos()
+	local t = getText({{["x"] = 3, ["y"] = y, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}})
 	if t then
-		local sKey = t[1]
+		local sKey = t[1]["contents"][1]
 		if encryption.decrypt(WDM.readAllText(sPath), sKey) == sKey then
 			return true, sKey
 		end
