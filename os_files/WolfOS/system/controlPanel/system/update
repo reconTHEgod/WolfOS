@@ -31,7 +31,7 @@ local function installFile(sLocation, sPath, sName)
 	if sDir ~= nil and not fs.isDir(sDir) then
 		fs.makeDir(sDir)
 	end
-	if bOnline then s1 = "Downloading and installing file:" else s1 = "Installing file:" end
+	if bOnline then s1 = "Downloading and updating file:" else s1 = "Updating file:" end
 	s2 = "/" .. sPath
 	redraw()
 	local sData = nil
