@@ -15,6 +15,7 @@ local sModemPort = WDM.readSystemData("modem_port")
 if sModemPort then
 	if WPH.getType(sModemPort) ~= "modem" then
 		WDM.writeSystemData(nil, "modem_port")
+		WDM.writeSystemData(true, "offline")
 	elseif not WDM.readSystemData("offline") and WPH.getType(sModemPort) == "modem" then
 		print("Initiating modem...")
 		rednet.open(sModemPort)

@@ -7,7 +7,7 @@ Please ask for permission before attempting to redistribute any code relating to
 local tMonitors = {}
 local bMenuLoop = true
 
-local getSide = function(sFilter, bInc)
+local getSide = function(sFilter)
 	while true do
 		local tChoices = {}
 		for _, sSide in ipairs(sFilter) do
