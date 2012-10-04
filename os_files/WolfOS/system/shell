@@ -76,3 +76,6 @@ local runCoreModule = function()
 end
 	
 parallel.waitForAny(runOS, runClock, runCoreModule, unpack(tModules))
+print("Press any key to continue...")
+os.pullEvent("key")
+os.shutdown()
