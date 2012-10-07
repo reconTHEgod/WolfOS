@@ -20,19 +20,13 @@ function generateUID()
 	return sUID
 end
 
-function getUsers()
-	local tUsers = {}
+function exists(sUser)
 	if not WDM.readSystemData("offline") and WDM.readSystemData("server_id") and not WDM.readServerData("server_state") then
 		WNC.send(WDM.readSystemData("server_id"), "data_request", "user_list")
 		_, _, _, tUsers = WNC.receive(WDM.readSystemData("server_id"), 5)
-	else
+	elseif #tUsers == 0 then
 		tUsers = textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("data") .. "users.dat")))
 	end
-	return tUsers
-end
-
-function exists(sUser)
-	tUsers = getUsers()
 	if type(tUsers) == "table" then
 		for nUser, tUser in ipairs(tUsers) do
 			if sUser == tUser.uid or sUser == tUser.name then
