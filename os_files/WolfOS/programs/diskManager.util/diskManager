@@ -90,7 +90,8 @@ while bMenuLoop == true do
 				end,
 				["encrypt_disk"] = function()
 					WUI.clear("Disk Manager")
-					while true do
+					WUI.slowPrint("This feature has not been implemented yet.", nil, nil, true)
+					--[[while true do
 						WUI.slowPrint("Enter new encryption key: \n")
 						WUI.registerTextField(nil, "%w", 16, true)
 						local t = WUI.getText(true)
@@ -109,17 +110,18 @@ while bMenuLoop == true do
 						else
 							break
 						end
-					end
+					end]]--
 				end,
 				["decrypt_disk"] = function()
 					WUI.clear("Disk Manager")
-					local bSuccess, sKey = WUI.correctKey("Disk Manager", disk.getMountPath(sSide) .. "/.encrypt", true)
+					WUI.slowPrint("This feature has not been implemented yet.", nil, nil, true)
+					--[[local bSuccess, sKey = WUI.correctKey("Disk Manager", disk.getMountPath(sSide) .. "/.encrypt", true)
 					if bSuccess then
 						WDM.decryptDir(disk.getMountPath(sSide) .. "/", sKey)
 						fs.delete(disk.getMountPath(sSide) .. "/.encrypt")
 						WUI.clear("Disk Manager")
 						WUI.slowPrint("Disk decrypted.", nil, nil, true)
-					end
+					end]]--
 				end,
 			}
 			local sSelection = WUI.menu(tChoices, "Disk Manager", "Disk Manager", true, {["disk_eject"] = sSide})
