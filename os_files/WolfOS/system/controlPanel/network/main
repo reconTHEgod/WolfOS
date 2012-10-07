@@ -128,6 +128,7 @@ while bMenuLoop == true do
 		end,
 		["server_disconnect"] = function()
 			WDM.writeSystemData(nil, "server_id")
+			if not WDM.readSystemTemp("local_user") then bMenuLoop = false WUI.logout() end
 		end,
 		["relay_connect"] = function()
 			WUI.clear("Control Panel")

@@ -1,0 +1,119 @@
+--1.4.0_b6
+--[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
+Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
+
+local tEmails
+
+local function getEmailList()
+	if not WDM.readSystemData("offline") and not WDM.readServerData("server_state") then
+		WNC.send(WDM.readSystemData("server_id"), "data_request", "email_list", WDM.readSystemTemp("current_uid"))
+		local nSenderID, nDistance, sEvent, p1 = WNC.receive(WDM.readSystemData("server_id"), 5)
+		if sEvent == "data_success" then
+			if type(p1) == "table" then return p1 end
+		else
+			WUI.clear("Startup Menu")
+			WUI.slowPrint("Could not connect to Server: \n")
+			WUI.slowPrint("> " .. sEvent .. ": " .. p1 .. "\n")
+			WUI.slowPrint("Press any key to continue...")
+			os.pullEvent("key")
+		end
+	else
+		return textutils.unserialize(encryption.fromBase64(WDM.readAllText(WDM.getSystemDir("users") .. WDM.readSystemTemp("current_uid") .. "/" ..  "email.dat")))
+	end
+	return nil
+end
+
+local function viewEmail(nEmail)
+	local nWidth, nHeight = term.getSize()
+	tEmail = tEmails[nEmail]
+	WUI.clear("Email Client")
+	WUI.slowPrint("From: " .. tEmail.sender)
+	WUI.slowPrint("Subject: " .. tEmail.header)
+	WUI.slowPrint(string.rep("-", nWidth))
+	WUI.slowWrite(string.rep("-", nWidth), 1, 18)
+	WUI.getText({{["x"] = 1, ["y"] = 7, ["width"] = nWidth, ["height"] = nHeight - 8, ["hidden"] = false, ["editable"] = false, ["contents"] = tEmail.body}})
+end
+
+local bMenuLoop = true
+while bMenuLoop do
+	local tChoices = {
+		{["display"] = "Inbox", ["id"] = "inbox", ["selectable"] = true},
+		{["display"] = "Archive", ["id"] = "archive", ["selectable"] = true},
+		{["display"] = "", ["selectable"] = false},
+		{["display"] = "Compose", ["id"] = "compose", ["selectable"] = true}
+	}
+	local tActions = {
+		["inbox"] = function()
+			tEmails = getEmailList()
+			if tEmails then
+				while true do
+					tChoices = {}
+					for k, v in ipairs(tEmails) do
+						local sDisplay
+						if v.status == "unread" then
+							sDisplay = "[*]" .. v.sender .. ": " .. v.header
+						elseif v.status == "read" then
+							sDisplay = "[ ]" .. v.sender .. ": " .. v.header
+						end
+						tChoices[#tChoices + 1] = {
+							["display"] = sDisplay,
+							["id"] = k,
+							["selectable"] = true
+						}
+					end
+					local sSelection = WUI.menu(tChoices, "Inbox", "Email Client", true)
+					if sSelection == "return" then
+						break
+					else
+						viewEmail(sSelection)
+					end
+				end
+			end
+		end,
+		["archive"] = function()
+			tEmails = getEmailList()
+			if tEmails then
+				while true do
+					tChoices = {}
+					for k, v in ipairs(tEmails) do
+						if v.status == "archived" then
+							tChoices[#tChoices + 1] = {
+								["display"] = v.sender .. ": " .. v.header,
+								["id"] = k,
+								["selectable"] = true
+							}
+						end
+					end
+					local sSelection = WUI.menu(tChoices, "Archive", "Email Client", true)
+					if sSelection == "return" then
+						break
+					else
+						viewEmail(sSelection)
+					end
+				end
+			end
+		end,
+		["compose"] = function()
+			local nWidth, nHeight = term.getSize()
+			WUI.clear("Email Client")
+			WUI.slowPrint("To: ", 1, 4)
+			WUI.slowPrint("Subject: ", 1, 5)
+			WUI.slowPrint(string.rep("-", nWidth), 1, 6)
+			WUI.slowWrite(string.rep("-", nWidth), 1, 18)
+			local t = WUI.getText({
+				{["x"] = 5, ["y"] = 4, ["width"] = 16, ["height"] = 1, ["pattern"] = "[%w%.%-_]", ["hidden"] = false, ["editable"] = true},
+				{["x"] = 10, ["y"] = 5, ["width"] = 32, ["height"] = 1, ["pattern"] = ".", ["hidden"] = false, ["editable"] = true},
+				{["x"] = 1, ["y"] = 7, ["width"] = nWidth, ["height"] = nHeight - 8, ["lines"] = 128, ["pattern"] = ".", ["hidden"] = false, ["editable"] = true}
+			})
+			if t then
+				local sReceiver, sHeader, sBody = t[1]["contents"][1], t[2]["contents"][1], t[3]["contents"]
+				WNC.send(WDM.readSystemData("server_id"), "data_push", "new_email", sReceiver, WDM.readSystemTemp("current_user"), sHeader, sBody)
+				WUI.clear("Email Client")
+				WUI.slowPrint("Email sent!", nil, nil, true)
+			end
+		end,
+		["return"] = function() bMenuLoop = false os.run({}, WDM.getSystemDir("system") .. "programMenu") end
+	}
+	local sSelection = WUI.menu(tChoices, "Email Client", "Email Client", true)
+	tActions[sSelection]()
+end

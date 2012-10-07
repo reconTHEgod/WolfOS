@@ -2,6 +2,8 @@
 --[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
+local sUserInput, sPassInput = nil, nil
+
 WUI.clear("WolfOS Setup")
 WUI.slowPrint("Welcome to WolfOS!\n\nPlease create a User Account to complete the setup.", nil, nil, true)
 
@@ -13,12 +15,12 @@ while true do
 	WUI.slowPrint("Please enter a Passcode:", 1, 8)
 	WUI.slowPrint(">", 1, 10)
 	local t = WUI.getText({
-		{["x"] = 3, ["y"] = 6, ["width"] = 16, ["height"] = 1, ["pattern"] = "[%w%.%-_]", ["hidden"] = false, ["editable"] = true},
-		{["x"] = 3, ["y"] = 10, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}
+		{["x"] = 3, ["y"] = 6, ["width"] = 16, ["height"] = 1, ["pattern"] = "[%w%.%-_]", ["hidden"] = false, ["editable"] = true, ["contents"] = {sUserInput}},
+		{["x"] = 3, ["y"] = 10, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true, ["contents"] = {sPassInput}}
 	})
 	WUI.clear("WolfOS Setup")
 	if t then
-		local sUserInput, sPassInput = t[1]["contents"][1], t[2]["contents"][1]
+		sUserInput, sPassInput = t[1]["contents"][1], t[2]["contents"][1]
 		if #sUserInput > 0 and #sPassInput > 7 then
 			if not WDM.exists(WDM.getSystemDir("data") .. "users.dat") then
 				WDM.fWrite(WDM.getSystemDir("data") .. "users.dat", "")
