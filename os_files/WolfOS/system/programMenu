@@ -16,5 +16,5 @@ local sSelection = WUI.menu(tChoices, "Welcome '" .. sUser .. "'!", "Program Men
 if sSelection == "return" then
 	os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 else
-	os.run({}, WDM.getSystemDir("programs") .. sSelection .. ".prog/" .. sSelection)
+	os.run({}, WDM.getSystemDir("programs") .. sSelection .. ".prog/main")
 end
