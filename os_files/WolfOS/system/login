@@ -2,7 +2,7 @@
 --[[WolfOS is the intellectual property of James Chapman (toxic.wolf@hotmail.co.uk).
 Please ask for permission before attempting to redistribute any code relating to WolfOS IN ANY FORM.]]--
 
-WUI.clear("Startup Menu")
+WUI.clear("")
 WUI.slowPrint("Please enter your User Account ID:", 1, 4)
 WUI.slowPrint(">", 1, 6)
 WUI.slowPrint("Please enter your Passcode:", 1, 8)
@@ -14,7 +14,7 @@ local t = WUI.getText({
 if t then
 	local sUserInput, sPassInput = t[1]["contents"][1], t[2]["contents"][1]
 	local tUser, p1, p2 = WAU.checkLogin(sUserInput, hash.sha256(sPassInput))
-	WUI.clear("Startup Menu")
+	WUI.clear("")
 	if tUser then
 		WUI.slowPrint("Logging in...", nil, nil, true)
 		WDM.writeSystemTemp(tUser.uid, "current_uid")
@@ -23,7 +23,6 @@ if t then
 		WDM.writeSystemTemp(tUser.type, "current_type")
 		os.run({}, WDM.getSystemDir("system") .. "mainMenu")
 	elseif p2 ~= "invalid_user" then
-		WUI.clear("Startup Menu")
 		WUI.slowPrint("Could not connect to Server: \n")
 		WUI.slowPrint("> " .. p1 .. ": " .. p2 .. "\n")
 		if WUI.choiceMenu("Switch to Offline Mode?") then

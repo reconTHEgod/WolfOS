@@ -15,6 +15,6 @@ while bMenuLoop == true do
 		["reboot"] = function() bMenuLoop = false WUI.reboot() end,
 		["shutdown"] = function() bMenuLoop = false WUI.shutdown() end
 	}
-	local sSelection = WUI.menu(tChoices, "Welcome User!", "Startup Menu")
+	local sSelection = WUI.menu(tChoices, "Welcome User!", "")
 	tActions[sSelection]()
 end
