@@ -73,6 +73,30 @@ function tApi.setCursorBlink(b)
 	call("setCursorBlink", b)
 end
 
+function tApi.setTextColor(c)
+	call("setTextColor", c)
+end
+
+function tApi.setTextColour(c)
+	call("setTextColour", c)
+end
+
+function tApi.setBackgroundColor(c)
+	call("setBackgroundColor", c)
+end
+
+function tApi.setBackgroundColour(c)
+	call("setBackgroundColour", c)
+end
+
+function tApi.isColor()
+	call("isColor")
+end
+
+function tApi.isColour()
+	call("isColour")
+end
+
 function tApi.clear()
 	call("clear")
 end
