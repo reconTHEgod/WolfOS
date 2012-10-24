@@ -4,351 +4,543 @@ Please ask for permission before attempting to redistribute any code relating to
 
 --WolfOS User Interface Library
 
-local tColourScheme = {}
+local bShowClock = false
+local tClearStack = {}
 
-if term.isColour() then
-	tColourScheme = {
-		cursor = colours.white,
-		cursor_inverse = colours.blue,
-		screen = colours.blue,
-		screen_inverse = colours.white,
-		screen_text = colours.white,
-		screen_text_inverse = colours.blue,
-		statusbar = colours.white,
-		statusbar_inverse = colours.blue,
-		statusbar_text = colours.blue,
-		statusbar_text_inverse = colours.white
-	}
-else
-	tColourScheme = {
-		cursor = colours.white,
-		cursor_inverse = colours.black,
-		screen = colours.black,
-		screen_inverse = colours.white,
-		screen_text = colours.white,
-		screen_text_inverse = colours.black,
-		statusbar = colours.white,
-		statusbar_inverse = colours.black,
-		statusbar_text = colours.black,
-		statusbar_text_inverse = colours.white
-	}
+local function getAlignment(sText, sAxis, sAlign)
+	local nWidth, nHeight = term.getSize()
+	if sAxis == "x" then
+		if sAlign == "left" then
+			return 1
+		elseif sAlign == "center" then
+			return math.floor(nWidth / 2) - math.floor(string.len(sText) / 2) + 1
+		elseif sAlign == "right" then
+			return nWidth - string.len(sText) + 1
+		elseif type(sAlign) == "number" then
+			return sAlign
+		end
+	elseif sAxis == "y" then
+		if sAlign == "top" then
+			return 1
+		elseif sAlign == "center" then
+			return math.floor(nHeight / 2)
+		elseif sAlign == "bottom" then
+			return nHeight
+		elseif type(sAlign) == "number" then
+			return sAlign
+		end
+	end
+	return nil
 end
 
---Basic functions
-
-function getScreenWidth()
-	local w = term.getSize()
-	return w
-end
-
-function getScreenHeight()
-	local w, h = term.getSize()
-	return h
-end
-
-function fastWrite(sString, x, y)
-	x = x or 1
-	y = y or 1
-	
+function fastWrite(sString, xPos, yPos)
+	local nWidth, nHeight = term.getSize()
+	local a, b = term.getCursorPos()
+	local x = getAlignment(sString, "x", xPos) or a
+	local y = getAlignment(sString, "y", yPos) or b
 	term.setCursorPos(x, y)
-	term.write(sString)
-end
-
-function slowWrite(sString, x, y)
-	x = x or 1
-	y = y or 1
-	
-	term.setCursorPos(x, y)
-	
-	while #sString > 0 do
+	local function newLine()
+		if y + 1 <= nHeight then
+			term.setCursorPos(1, y + 1)
+		end
+		x, y = term.getCursorPos()
+	end
+	while string.len(sString) > 0 do
 		local whitespace = string.match(sString, "^[ \t]+")
 		if whitespace then
 			term.write(whitespace)
 			x, y = term.getCursorPos()
-			sString = string.sub(sString, #whitespace + 1)
+			sString = string.sub(sString, string.len(whitespace) + 1)
+		end
+		local newline = string.match(sString, "^\n")
+		if newline then
+			newLine()
+			sString = string.sub(sString, 2)
 		end
 		local text = string.match(sString, "^[^ \t\n]+")
 		if text then
-			term.write(text)
-			x, y = term.getCursorPos()
-			sString = string.sub(sString, #text + 1)
-			sleep(0.01)
+			sString = string.sub(sString, string.len(text) + 1)
+			if string.len(text) > nWidth then			
+				while string.len(text) > 0 do
+				if x > nWidth then
+					newLine()
+				end
+					term.write(text)
+					text = string.sub(text, (nWidth - x) + 2)
+					x, y = term.getCursorPos()
+				end
+			else
+				if (x - 1) + string.len(text) > nWidth then
+					newLine()
+				end
+				term.write(text)
+				x, y = term.getCursorPos()
+			end
 		end
 	end
 end
 
-function clear()
+function slowWrite(sString, xPos, yPos, bSleep)
+	bSleep = bSleep or false
+	local nWidth, nHeight = term.getSize()
+	local a, b = term.getCursorPos()
+	local x = getAlignment(sString, "x", xPos) or a
+	local y = getAlignment(sString, "y", yPos) or b
+	local bPause = false
+	if WDM then bPause = WDM.readSystemData("instant_print") end
+	term.setCursorPos(x, y)
+	local function newLine()
+		if y + 1 <= nHeight then
+			term.setCursorPos(1, y + 1)
+		end
+		x, y = term.getCursorPos()
+	end
+	while string.len(sString) > 0 do
+		local whitespace = string.match(sString, "^[ \t]+")
+		if whitespace then
+			term.write(whitespace)
+			x, y = term.getCursorPos()
+			sString = string.sub(sString, string.len(whitespace) + 1)
+		end
+		local newline = string.match(sString, "^\n")
+		if newline then
+			newLine()
+			sString = string.sub(sString, 2)
+		end
+		local text = string.match(sString, "^[^ \t\n]+")
+		if text then
+			sString = string.sub(sString, string.len(text) + 1)
+			if string.len(text) > nWidth then			
+				while string.len(text) > 0 do
+				if x > nWidth then
+					newLine()
+				end
+					term.write(text)
+					text = string.sub(text, (nWidth - x) + 2)
+					x, y = term.getCursorPos()
+					if not bPause then sleep(0.01) end
+				end
+			else
+				if (x - 1) + string.len(text) > nWidth then
+					newLine()
+				end
+				term.write(text)
+				x, y = term.getCursorPos()
+				if not bPause then sleep(0.01) end
+			end
+		end
+	end
+	if bSleep == true then sleep(1.5) end
+end
+
+function fastPrint(sString, xPos, yPos)
+	fastWrite(sString .. "\n", xPos, yPos)
+end
+
+function slowPrint(sString, xPos, yPos, bSleep)
+	slowWrite(sString .. "\n", xPos, yPos, bSleep)
+end
+
+function setupClock()
+	local clockFunc = function()
+		local sTime = nil
+		local bTime = false
+		while true do
+			if WDM then bTime = WDM.readSystemData("clock_mode") end
+			local sNewTime = textutils.formatTime(os.time(), bTime)
+			if sNewTime ~= sTime then
+				sTime = string.rep(" ", 8 - #sNewTime) .. sNewTime
+				if WUI.checkClock() then
+					local x, y = term.getCursorPos()
+					WUI.fastWrite(sTime, "center", "top")
+					term.setCursorPos(x, y)
+				end
+			end
+			sleep(0.01)
+		end
+	end
+	return clockFunc
+end
+
+function showClock()
+	bShowClock = true
+end
+
+function checkClock()
+	return bShowClock
+end
+
+function hideClock()
+	bShowClock = false
+end
+
+function clear(sProgram)
+	if #sProgram > 19 then sProgram = string.sub(sProgram, 1, 16) .. "..." end
+	local nWidth = term.getSize()
+	local bTime = false
+	if WDM then bTime = WDM.readSystemData("clock_mode") end
+	local sNewTime = textutils.formatTime(os.time(), bTime)
+	local sClock = string.rep(" ", 8 - #sNewTime) .. sNewTime
+	if not bShowClock then sClock = "" end
+	local sUser = ""
+	local bSleep = false
+	if WDM then
+		sUser = WDM.readSystemTemp("current_user") or ""
+		bSleep = WDM.readSystemData("instant_print")
+	end
+	term.clear()
+	if sProgram ~= tClearStack[#tClearStack] and not bSleep then
+		local bClock = bShowClock
+		bShowClock = false
+		sleep(0.1)
+		slowWrite(sProgram, "left", "top")
+		slowWrite(sClock, "center", "top")
+		bShowClock = bClock
+		slowWrite(sUser, "right", "top")
+		slowWrite(string.rep("-", nWidth), "left", 2)
+	else
+		fastWrite(sProgram, "left", "top")
+		fastWrite(sClock, "center", "top")
+		fastWrite(sUser, "right", "top")
+		fastWrite(string.rep("-", nWidth), "left", 2)
+	end
+	tClearStack = {sProgram}
+	term.setCursorPos(1, 4)
+end
+
+function bootScreen(sLine1, sLine2)
+	bShowClock = false
+	term.clear()
+	slowPrint(sLine1, "center", "center")
+	slowPrint(sLine2, "center")
+	slowWrite("toxic.wolf@hotmail.co.uk", "right", "bottom")
+	sleep(3)
 	term.clear()
 	term.setCursorPos(1, 1)
 end
 
---Frame functions
-
-local currentFrame
-
-function redrawCurrentFrame()
-	term.setBackgroundColour(currentFrame.background_colour)
-	clear()
-	
-	for k, v in ipairs(currentFrame.objects) do
-		term.setBackgroundColour(currentFrame.background_colour)
-		v:redraw()
+function logout()
+	WDM.writeSystemTemp("", "current_user")
+	clear("Startup Menu")
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		disk.stopAudio(sSide)
 	end
+	slowPrint("Logging out...", nil, nil, true)
+	os.run({}, WDM.getSystemDir("system") .. "startupMenu")
 end
 
-function setCurrentFrame(frame)
-	if type(frame) == "table" and frame.type == "frame" then
-		currentFrame = frame
-		redrawCurrentFrame()
+function shutdown()
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		disk.stopAudio(sSide)
 	end
+	bootScreen("Shutting down WolfOS", "Please wait...")
+	os.shutdown()
+	sleep(0.5) -- Circumvents screen flashing before shutdown
 end
 
-function runCurrentFrame()
-	local currentObject = nil
-	local currentObjectNum = 0
-	
-	for _, v in ipairs(currentFrame.objects) do
-		if v.hasFocus then v:setFocused(false) end
+function reboot()
+	for _, sSide in ipairs(WPH.getValidSides()) do
+		disk.stopAudio(sSide)
 	end
-	
-	local function next()
-		for k = currentObjectNum + 1, #currentFrame.objects, 1 do
-			local v = currentFrame.objects[k]
-			if v.hasFocus then
-				if currentObject then currentObject:setFocused(false) end
-				currentObject = v
-				currentObjectNum = k
-				currentObject:setFocused(true)
-				return true
-			end
+	bootScreen("Rebooting WolfOS", "Please wait...")
+	os.reboot()
+	sleep(0.5) -- Circumvents screen flashing before reboot
+end
+
+function menu(tChoices, sMenuTitle, sProgram, bReturn, tEventFilters)
+	if bReturn == true then
+		if #tChoices > 0 then
+			table.insert(tChoices, {["display"] = "", ["selectable"] = false})
 		end
-		return false
-	end
+		table.insert(tChoices, {["display"] = "Return", ["id"] = "return", ["selectable"] = true})
+	end	
 	
-	local function prev()
-		for k = currentObjectNum - 1, 1, -1 do
-			local v = currentFrame.objects[k]
-			if v.hasFocus then
-				if currentObject then currentObject:setFocused(false) end
-				currentObject = v
-				currentObjectNum = k
-				currentObject:setFocused(true)
-				return true
-			end
+	local n = 1
+	repeat
+		if (tChoices[n]["type"] and not tChoices[n]["type"] == WDM.readSystemTemp("current_type")) then
+			table.remove(tChoices, n)
+		else
+		n = n + 1
 		end
-		return false
+	until n > #tChoices
+	
+	local nWidth, nHeight = term.getSize()
+	local nMaxDisplay = nHeight - 5
+	local nScroll = 0
+	local nScrollMax = #tChoices - nMaxDisplay
+	local nSelection = 1
+	local nPosY = 1
+	local bFirst = true
+	
+	local function redraw()
+		clear(sProgram)
+		if bFirst == true then slowPrint(sMenuTitle .. " \n") else fastPrint(sMenuTitle .. " \n") end
+		for nLine = 1, math.min(nMaxDisplay, #tChoices) do
+			local sLine = "  "
+			if nPosY == nLine then
+				sLine = "> "
+			end
+			if nLine == 1 and nScroll > 0 then
+				sLine = "^"
+			elseif nLine == nMaxDisplay and nScrollMax > 0 then
+				sLine = "v"
+			else
+				sLine = sLine .. tChoices[nLine + nScroll]["display"]
+			end
+			if bFirst == true then slowWrite(sLine, 1, nLine + 5) else fastWrite(sLine, 1, nLine + 5) end
+		end
+		bFirst = false
 	end
 	
-	while true do
-		redrawCurrentFrame()
-		local _, p1 = os.pullEvent("key")
-		-- Global key presses checked first
-		if p1 == keys.leftCtrl then
-			if not next() then
-				while prev() do end
+	local function move(sDirection)
+		if sDirection == "down" then
+			for n = nSelection + 1, #tChoices, 1 do
+				if tChoices[n]["selectable"] then
+					if nPosY == nMaxDisplay - 1 and nScrollMax > 0 then
+						nScroll = nScroll + (n - nSelection)
+						nScrollMax = nScrollMax - (n - nSelection)
+					elseif nPosY < nMaxDisplay then
+						nPosY = nPosY + (n - nSelection)
+					end
+					nSelection = n
+					return true
+				end
 			end
-		elseif p1 == keys.rightCtrl or p1 == 157 then -- keys.rightCtrl doesn't seem to work on a UK keyboard
-			if not prev() then
-				while next() do end
-			end
-		-- Object specific key presses checked here
-		elseif currentObject then
-			if currentObject.object_type == "button" then
-				if p1 == keys.enter and currentObject:isEnabled() then
-					return currentObject:action_listener()
+		elseif sDirection == "up" then
+			for n = nSelection - 1, 1, -1 do
+				if tChoices[n]["selectable"] then
+					if nPosY == 2 and nScroll > 0 then
+						nScroll = nScroll - (nSelection - n)
+						nScrollMax = nScrollMax + (nSelection - n)
+					elseif nPosY > 1 then
+						nPosY = nPosY - (nSelection - n)
+					end
+					nSelection = n
+					return true
 				end
 			end
 		end
 	end
-end
-
-function newFrame(frameID)
-	local tFrame = {
-		["name"] = frameID,
-		["type"] = "frame",
-		["objects"] = {},
-		["background_colour"] = tColourScheme.screen,
-		["setBackgroundColour"] = function(self, c)
-			if type(c) == "number" then
-				self.background_colour = c
-			elseif colours[c] then
-				self.background_colour = colours[c]
+	
+	while not tChoices[nSelection]["selectable"] do
+		move("down")
+	end
+	while true do
+		redraw()
+		local sEvent = nil
+		repeat
+			sEvent, p1, p2, p3, p4, p5 = os.pullEvent()
+		until sEvent == "key" or (tEventFilters and tEventFilters[sEvent])
+		if sEvent == "key" and p1 == 200 then --up
+			move("up")
+		elseif sEvent == "key" and p1 == 208 then --down
+			move("down")
+		elseif sEvent == "key" and p1 == 201 then --page up
+			while tChoices[nSelection - 1] do
+				if not move("up") then break end
 			end
-		end,
-		["add"] = function(self, object, x, y)
-			object.x = x
-			object.y = y
-			
-			if #self.objects > 0 then
-				for k, v in ipairs(self.objects) do
-					if y < v.y then
-						table.insert(self.objects, k, object)
-						break
-					elseif y == v.y then
-						if x < v.x then
-							table.insert(self.objects, k, object)
-							break
-						elseif x == v.x then
-							table.insert(self.objects, k + 1, object)
-							break
-						elseif x > v.x and k == #self.objects then
-							table.insert(self.objects, object)
-							break
-						end
-					elseif y > v.y and k == #self.objects then
-						table.insert(self.objects, object)
-						break
+		elseif sEvent == "key" and p1 == 209 then --page down
+			while tChoices[nSelection + 1] do
+				if not move("down") then break end
+			end
+		elseif sEvent == "key" and p1 == 28 then --enter
+			if tChoices[nSelection]["id"] == "return" and bReturn == true then
+				return "return", 0
+			elseif tChoices[nSelection] then
+				return tChoices[nSelection]["id"], nSelection
+			end
+		elseif sEvent == "key" and p1 == 14 then --backspace
+			if bReturn == true then
+				return "return", 0
+			end
+		elseif tEventFilters and tEventFilters[sEvent] then
+			if type(tEventFilters[sEvent]) == "table" then
+				for _, filter in pairs(tEventFilters[sEvent]) do
+					if p1 == filter then
+						return sEvent, p1, p2, p3, p4, p5
 					end
 				end
 			else
-				table.insert(self.objects, object)
+				if p1 == tEventFilters[sEvent] then
+					return sEvent, p1, p2, p3, p4, p5
+				end
 			end
-		end,
-		["remove"] = function(self, objectID)
-			self[objectID] = nil
 		end
-	}
-	
-	return tFrame
+	end
 end
 
---UI objects
-
-function newLabel(labelID, w)
-	local tLabel = {
-		["name"] = labelID,
-		["type"] = "object",
-		["object_type"] = "label",
-		["width"] = w,
-		["text"] = "",
-		["text_align"] = "left",
-		["text_colour"] = tColourScheme.screen_text,
-		["background_colour"] = nil,
-		["setText"] = function(self, sText)
-			if type(sText) == "string" then
-				self.text = sText
-			end
-		end,
-		["setTextAlign"] = function(self, sAlign)
-			if sAlign == "left" or sAlign == "center" or sAlign == "right" then
-				self.text_align = sAlign
-			end
-		end,
-		["setTextColour"] = function(self, c)
-			if type(c) == "number" then
-				self.text_colour = c
-			elseif colours[c] then
-				self.text_colour = colours[c]
-			end
-		end,
-		["setBackgroundColour"] = function(self, c)
-			if type(c) == "number" then
-				self.background_colour = c
-			elseif colours[c] then
-				self.background_colour = colours[c]
-			end
-		end,
-		["redraw"] = function(self)
-			if self.background_colour then	term.setBackgroundColour(self.background_colour) end
-			term.setTextColour(self.text_colour)
-			fastWrite(string.rep(" ", self.width), self.x, self.y)
-			
-			local x, y = self.x, self.y
-			if self.text_align == "center" then
-				x = self.x + math.ceil((self.width / 2) - (#self.text / 2))
-			elseif self.text_align == "right" then
-				x = (self.x + self.width) - #self.text
-			end
-			fastWrite(string.sub(self.text, 1, self.width), x, y)
-		end
-	}
-	
-	return tLabel
+function choiceMenu(sQuestion)
+	local nWidth, nHeight = term.getSize()
+	if (string.len(sQuestion) + 4) > nWidth then
+		slowPrint(string.sub(sQuestion, 1, nWidth - 8) .. "...? Y|N")
+	else
+		slowPrint(sQuestion .. " Y|N")
+	end
+	repeat
+		sEvent, sChar = os.pullEvent("char")
+	until string.lower(sChar) == "y" or string.lower(sChar) == "n"
+	if string.lower(sChar) == "y" then
+		return true
+	end
+	return false
 end
 
-function newButton(buttonID, w)
-	local tButton = {
-		["name"] = buttonID,
-		["type"] = "object",
-		["object_type"] = "button",
-		["width"] = w,
-		["text"] = "",
-		["text_colour"] = tColourScheme.screen_text,
-		["focus_text_colour"] = tColourScheme.screen_text_inverse,
-		["background_colour"] = nil,
-		["focus_background_colour"] = tColourScheme.screen_inverse,
-		["has_focus"] = false,
-		["is_enabled"] = true,
-		["action_listener"] = function(self) end,
-		["setText"] = function(self, sText)
-			if type(sText) == "string" then
-				self.text = sText
-			end
-		end,
-		["setTextColour"] = function(self, c)
-			if type(c) == "number" then
-				self.text_colour = c
-			elseif colours[c] then
-				self.text_colour = colours[c]
-			end
-		end,
-		["setFocusTextColour"] = function(self, c)
-			if type(c) == "number" then
-				self.focus_text_colour = c
-			elseif colours[c] then
-				self.focus_text_colour = colours[c]
-			end
-		end,
-		["setBackgroundColour"] = function(self, c)
-			if type(c) == "number" then
-				self.background_colour = c
-			elseif colours[c] then
-				self.background_colour = colours[c]
-			end
-		end,
-		["setFocusBackgroundColour"] = function(self, c)
-			if type(c) == "number" then
-				self.focus_background_colour = c
-			elseif colours[c] then
-				self.focus_background_colour = colours[c]
-			end
-		end,
-		["setEnabled"] = function(self, b)
-			if type(b) == "boolean" then
-				self.is_enabled = b
-			end
-		end,
-		["setFocused"] = function(self, b)
-			if type(b) == "boolean" then
-				self.has_focus = b
-			end
-		end,
-		["setActionListener"] = function(self, f)
-			if type(f) == "function" then
-				self.action_listener = f
-			end
-		end,
-		["isEnabled"] = function(self)
-			return self.is_enabled
-		end,
-		["hasFocus"] = function(self)
-			return self.has_focus
-		end,
-		["redraw"] = function(self)
-			if self:hasFocus() then
-				term.setBackgroundColour(self.focus_background_colour)
-				term.setTextColour(self.focus_text_colour)
-			else
-				if self.background_colour then	term.setBackgroundColour(self.background_colour) end
-				term.setTextColour(self.text_colour)
-			end
-			fastWrite(string.rep(" ", self.width), self.x, self.y)
-			
-			local x, y = self.x, self.y
-			x = self.x + math.ceil((self.width / 2) - (#self.text / 2))
-			fastWrite(string.sub(self.text, 1, self.width), x, y)
+function getText(tTextFields, bReturn)
+	for k in ipairs(tTextFields) do
+		tTextFields[k]["line"] = 1
+		tTextFields[k]["scroll"] = 0
+		tTextFields[k]["xpos"] = 1
+		tTextFields[k]["ypos"] = 1
+		if not tTextFields[k]["lines"] then
+			tTextFields[k]["lines"] = tTextFields[k]["height"]
 		end
-	}
+		if not tTextFields[k]["contents"] then tTextFields[k]["contents"] = {} end
+		for n = 1, tTextFields[k]["lines"] do
+			if not tTextFields[k]["contents"][n] then tTextFields[k]["contents"][n] = "" end
+		end
+	end
 	
-	return tButton
+	local nActiveField, nLine = 1, 1
+	local nScroll = 0
+	local nXPos, nYPos = 1, 1
+	
+	local redraw = function()
+		term.setCursorBlink(false)
+		nLine = tTextFields[nActiveField]["line"]
+		nScroll = tTextFields[nActiveField]["scroll"]
+		nXPos = tTextFields[nActiveField]["xpos"]
+		nYPos = tTextFields[nActiveField]["ypos"]
+		fastWrite("Scroll: " .. nScroll .. ", Scroll Max: " .. tTextFields[nActiveField]["lines"] - (tTextFields[nActiveField]["height"] - 1) - 1 .. ", Line: " .. nLine .. ", Lines: " .. tTextFields[nActiveField]["lines"] .. "     ", 1, 19)
+		for _, v in ipairs(tTextFields) do
+			local i = v["scroll"]
+			for n = 1, v["height"] do
+				fastWrite(string.rep(" ", v["width"]), v["x"], v["y"] + (n - 1))
+				if v["hidden"] == true then
+					fastWrite(string.rep("*", #v["contents"][n + i]), v["x"], v["y"] + (n - 1))
+				else
+					fastWrite(v["contents"][n + i], v["x"], v["y"] + (n - 1))
+				end
+			end
+		end
+		term.setCursorPos(tTextFields[nActiveField]["x"] + (nXPos - 1), tTextFields[nActiveField]["y"] + (nYPos - 1))
+		if tTextFields[nActiveField]["editable"] then
+			term.setCursorBlink(true)
+		end
+	end
+	
+	term.setCursorPos(tTextFields[1]["x"], tTextFields[1]["y"])
+	while true do
+		redraw()
+		local sEvent, param
+		repeat
+			sEvent, param = os.pullEvent()
+		until sEvent == "key" or sEvent == "char"
+		if sEvent == "char" and tTextFields[nActiveField]["editable"] then
+			if #tTextFields[nActiveField]["contents"][nLine] < tTextFields[nActiveField]["width"] and string.find(param, tTextFields[nActiveField]["pattern"]) and not string.find(param, "£") then
+				tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, nXPos - 1) .. param .. string.sub(tTextFields[nActiveField]["contents"][nLine], nXPos)
+				tTextFields[nActiveField]["xpos"] = nXPos + 1
+			end
+		elseif sEvent == "key" then
+			if param == 28 then --enter
+				term.setCursorBlink(false)
+				return tTextFields
+			elseif param == 14 and tTextFields[nActiveField]["editable"] then --backspace
+				if #tTextFields[nActiveField]["contents"][nLine] > 0 and nXPos > 1 then
+					tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, nXPos - 2) .. string.sub(tTextFields[nActiveField]["contents"][nLine], nXPos)
+					tTextFields[nActiveField]["xpos"] = nXPos - 1
+				end
+			elseif param == 211 and tTextFields[nActiveField]["editable"] then --delete
+				if #tTextFields[nActiveField]["contents"][nLine] > 0 then
+					tTextFields[nActiveField]["contents"][nLine] = string.sub(tTextFields[nActiveField]["contents"][nLine], 1, nXPos - 1) .. string.sub(tTextFields[nActiveField]["contents"][nLine], nXPos + 1)
+				end
+			elseif param == 15 then --tab
+				if tTextFields[nActiveField + 1] then
+					nActiveField = nActiveField + 1
+				else
+					nActiveField = 1
+				end
+			elseif param == 200 then --up
+				if tTextFields[nActiveField]["editable"] then
+					if nLine > 1 then
+						if nYPos == 1 then 
+							tTextFields[nActiveField]["scroll"] = nScroll - 1
+						else
+							tTextFields[nActiveField]["ypos"] = nYPos - 1
+						end
+						tTextFields[nActiveField]["line"] = nLine - 1
+						tTextFields[nActiveField]["xpos"] = math.min(nXPos, #tTextFields[nActiveField]["contents"][nLine - 1] + 1)
+					end
+				elseif nScroll > 0 then
+					tTextFields[nActiveField]["scroll"] = nScroll - 1
+				end
+			elseif param == 208 then --down
+				if tTextFields[nActiveField]["editable"] then
+					if nLine < tTextFields[nActiveField]["lines"] then
+						if nYPos == tTextFields[nActiveField]["height"] then 
+							tTextFields[nActiveField]["scroll"] = nScroll + 1
+						else
+							tTextFields[nActiveField]["ypos"] = nYPos + 1
+						end
+						tTextFields[nActiveField]["line"] = nLine + 1
+						tTextFields[nActiveField]["xpos"] = math.min(nXPos, #tTextFields[nActiveField]["contents"][nLine + 1] + 1)
+					end
+				elseif nScroll < (tTextFields[nActiveField]["lines"] - (tTextFields[nActiveField]["height"] - 1) - 1) then
+					tTextFields[nActiveField]["scroll"] = nScroll + 1
+				end
+			elseif param == 203 then --left
+				if nXPos > 1 then
+					tTextFields[nActiveField]["xpos"] = nXPos - 1
+				end
+			elseif param == 205 then --right
+				if nXPos < (#tTextFields[nActiveField]["contents"][nLine] + 1) then
+					tTextFields[nActiveField]["xpos"] = nXPos + 1
+				end
+			elseif param == 199 then --home
+				tTextFields[nActiveField]["xpos"] = 1
+			elseif param == 207 then --end
+				tTextFields[nActiveField]["xpos"] = #tTextFields[nActiveField]["contents"][nLine] + 1
+			elseif param == 201 then --pageup
+				tTextFields[nActiveField]["scroll"] = 0
+				tTextFields[nActiveField]["ypos"] = 1
+				tTextFields[nActiveField]["line"] = 1
+			elseif param == 209 then --pagedown
+				tTextFields[nActiveField]["scroll"] = tTextFields[nActiveField]["lines"] - (tTextFields[nActiveField]["height"] - 1) - 1
+				tTextFields[nActiveField]["ypos"] = tTextFields[nActiveField]["height"]
+				tTextFields[nActiveField]["line"] = tTextFields[nActiveField]["lines"]
+			end
+		end
+	end
+end
+
+function correctPass(sProgram, bReturn)
+	slowPrint("Please enter your Passcode:\n")
+	slowWrite(">")
+	local _, y = term.getCursorPos()
+	local t = getText({{["x"] = 3, ["y"] = y, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}})
+	if t then
+		local sPass = t[1]["contents"][1]
+		if hash.sha256(sPass) == WDM.readSystemTemp("current_hash") then
+			return true
+		end
+		clear(sProgram)
+		slowPrint("Incorrect Passcode!", nil, nil, true)
+		return false
+	end
+	return false
+end
+
+function correctKey(sProgram, sPath, bReturn)
+	slowPrint("Please enter the encryption key:\n")
+	slowWrite(">")
+	local _, y = term.getCursorPos()
+	local t = getText({{["x"] = 3, ["y"] = y, ["width"] = 16, ["height"] = 1, ["pattern"] = "%w", ["hidden"] = true, ["editable"] = true}})
+	if t then
+		local sKey = t[1]["contents"][1]
+		if encryption.decrypt(WDM.readAllText(sPath), sKey) == sKey then
+			return true, sKey
+		end
+		clear(sProgram)
+		slowPrint("Incorrect encryption key!", nil, nil, true)
+	end
+	return false, nil
 end
