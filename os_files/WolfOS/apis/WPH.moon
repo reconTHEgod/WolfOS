@@ -11,4 +11,4 @@ export getAllPeripherals = (t) ->
 		if peripheral.isPresent(p) and (getType(p) == t or t == nil)
 			table.insert peripherals, {port: p, type: getType p}
 	
-	tPeripherals
+	peripherals

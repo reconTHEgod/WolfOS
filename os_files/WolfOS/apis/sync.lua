@@ -1,5 +1,3 @@
---1.4.0_b6
---Sync API for WolfOS
 --[[
 Copyright © 2012 Esteban Hermida a.k.a MysticT
 
