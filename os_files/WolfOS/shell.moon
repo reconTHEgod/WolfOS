@@ -1,24 +1,24 @@
 -- WolfOS Shell
 
-if not os.getComputerLabel!
-    os.setComputerLabel "ID# "..os.getComputerID!
-
 ok, err = pcall ->
+    if not os.getComputerLabel!
+        os.setComputerLabel "ID# "..os.getComputerID!
+    
+    debug.print "Initializing WolfOS "..os.getVersion!.."...\n"
     debug.print "Loading System APIs...\n"
     sleep 0.01
-    for _, api in ipairs fs.list "disk/WolfOS/apis"
-        if not fs.isDir fs.combine "disk/WolfOS/apis", api
+    for _, api in ipairs fs.list os.getSystemDir "apis"
+        if not fs.isDir fs.combine os.getSystemDir("apis"), api
             if not string.find api, ".moon"
-                os.loadAPI "disk/WolfOS/apis/"..api
+                os.loadAPI os.getSystemDir("apis")..api
                 debug.print "System API loaded: "..api\sub 1, (string.find(api, "%.") or #api + 1) - 1
 
     -- Extra init stuff goes here
-
-    debug.print "\nInitializing WolfOS..."
-    debug.print "Loading User Interface..."
+    
+    debug.print "\nLoading User Interface..."
     sleep 0.01
     
-    os.run {}, "disk/WolfOS/client/preLogin.lua"
+    os.run {}, os.getSystemDir("client").."startup.lua"
 
 -- Drop to command line if init failed and display error
 if not ok
