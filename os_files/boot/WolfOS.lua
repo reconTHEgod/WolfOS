@@ -84,7 +84,7 @@ function string.gmatch(_s, _pattern)
 	local pos = 1
 	return function()
 		local first, last = string.find(_s, _pattern, pos)
-		if nFirst == nil then
+		if first == nil then
 			return
 		end		
 		pos = last + 1
@@ -110,6 +110,12 @@ end
 -- Install Debug API
 
 debug = {}
+
+local function clear()
+    term.clear()
+    term.setCursorPos(1, 1)
+end
+debug.clear = clear
 
 local function write(text)
 	local w, h = term.getSize()		
@@ -367,14 +373,14 @@ function os.run(_env, _path, ...)
         end)
         if not ok then
         	if err and err ~= "" then
-	        	printError(err)
+				error(err..": ".._path, 0)
 	        end
         	return false
         end
         return true
     end
     if err and err ~= "" then
-		printError(err)
+		error(err..": ".._path, 0)
 	end
     return false
 end
@@ -401,8 +407,7 @@ local function loadModule(_path)
 		setfenv(fnModule, env)
 		fnModule()
 	else
-		printError(err)
-		return false
+		error(err..": ".._path, 0)
 	end
 	
 	local module = {}
@@ -430,9 +435,7 @@ function os.loadAPI(_path)
 		setfenv(fnAPI, env)
 		fnAPI()
 	else
-		printError(err)
-        APIsLoading[name] = nil
-		return false
+		error(err..": ".._path, 0)
 	end
 	
 	local API = {}
@@ -541,7 +544,7 @@ local ok, err = pcall(function()
 			rednet.run()
 		end,
 		function()
-			os.run({}, "/WolfOS/shell.lua")
+			os.run({}, "disk/WolfOS/shell.lua")
 		end)
 end)
 
@@ -551,7 +554,7 @@ if not ok then
 end
 
 pcall(function()
-	term.setCursorBlink( false )
+	term.setCursorBlink(false)
 	print("Press any key to continue")
 	os.pullEvent("key") 
 end)
