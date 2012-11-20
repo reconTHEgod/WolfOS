@@ -1,5 +1,24 @@
 -- WolfOS BIOS
 
+-- WolfOS version
+local _WOLFOS_VERSION = "2.0.0"
+
+function os.getVersion()
+	return _WOLFOS_VERSION
+end
+
+-- WolfOS directory mappings
+local _root = "/disk/WolfOS/"
+local _apis, _client, _server, _data, _progs = _root.."apis/", _root.."client/", _root.."server/", _root.."data/", _root.."programs/"
+local _controlPanel, _users = _client.."controlPanel/", _data.."users/"
+local _WOLFOS_DIRS = {
+	root = _root, apis = _apis, client = _client, server = _server, data = _data, programs = _progs, controlPanel = _controlPanel, users = _users
+}
+
+function os.getSystemDir(k)
+	return _WOLFOS_DIRS[k]
+end
+
 --[[
 -- Install safe versions of various library functions
 -- These will not put cfunctions on the stack, so don't break serialisation
