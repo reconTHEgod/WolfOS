@@ -1,54 +1,74 @@
 -- WolfOS Data Management Library
 
-dataTemp = {}
-dataClient = nil
-dataServer = nil
+export exists = (path) ->
+    file = io.open path, "r"
+    if file
+        file\close!
+        return true
 
-readData = (path) ->
-    return textutils.unserialize crypt.fromBase64 file.readAll path
+export readToTable = (path) ->
+    if exists path
+        file = io.open path, "r"
+        lines = {}
+        line = ""
+            
+        while line
+            line = file\read!
+            table.insert lines, line
+            
+        file\close!
+        return lines
 
-writeData = (path, table) ->
-    file.write path, crypt.toBase64 textutils.serialize table
-
-export readTempData = (k) ->
-    if k
-        return dataTemp[k]
-    return dataTemp
-
-export readClientData = (k) ->
-    if not dataClient
-        dataClient = readData os.getSystemDir("data").."client.dat"
-    if k
-        return dataClient[k]
-    return dataClient
-
-export readServerData = (k) ->
-    if not dataServer
-        dataServer = readData os.getSystemDir("data").."server.dat"
-    if k
-        return dataServer[k]
-    return dataServer
-
-export writeTempData = (v, k) ->
-    if k
-        dataTemp[k] = v
-    elseif type(v) == "table"
-        dataTemp = v
-
-export writeClientData = (v, k) ->
-    if not dataClient
-        dataClient = readData os.getSystemDir("data").."client.dat"
-    if k
-        dataClient[k] = v
-    elseif type(v) == "table"
-        dataClient = v
-    writeData os.getSystemDir("data").."client.dat", dataClient
-
-export writeServerData = (v, k) ->
-    if not dataServer
-        dataServer = readData os.getSystemDir("data").."server.dat"
-    if k
-        dataServer[k] = v
-    elseif type(v) == "table"
-        dataServer = v
-    writeData os.getSystemDir("data").."server.dat", dataServer
+export readLine = (path, line) ->
+    if exists path
+        lines = readToTable path
+        return lines[line]
+    
+export readAll = (path) ->
+    if exists path
+        file = io.open path, "r"
+        text = file\read "*a"
+        file\close!
+        return text
+    
+export write = (path, text = "") ->
+    file = io.open path, "w"
+    file\write text
+    file\close!
+    
+export writeFromTable = (path, lines) ->
+    text = ""
+    for n = 1, #lines
+        text ..= lines[n].."\n"
+    write path, text
+    
+export prepend = (path, text) ->
+    _text = readAll path
+    write path, text.."\n".._text
+    
+export prependFromTable = (path, lines) ->
+    text = ""
+    for n = 1, #lines
+        text ..= lines[n].."\n"
+    prepend path, text
+    
+export append = (path, text) ->
+    file = io.open path, "a"
+    file\write text.."\n"
+    file\close!
+    
+export appendFromTable = (path, lines) ->
+    text = ""
+    for n = 1, #lines
+        text ..= lines[n].."\n"
+    append path, text
+    
+export replaceLine = (path, line, text) ->
+    lines = readToTable path
+    lines[line] = text
+    writeFromTable path, lines
+    
+export removeLine = (path, line) ->
+    lines = readToTable path
+    table.remove lines, line
+    writeFromTable path, lines
