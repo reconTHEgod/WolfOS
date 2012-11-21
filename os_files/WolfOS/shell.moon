@@ -28,17 +28,57 @@ if not ok
         debug.printError err
     else
         debug.print "An unknown error occured during initialization."
-    debug.print "\nDropping to WolfOS command line."
+    debug.print "\nDropping to WolfOS command line.\nType 'help' to view a list of available commands.\n"
     
     running = true
     commandHistory = {}
     
+    -- Command line colours
+    backgroundColour = colours.black
+    userText = colours.white
+    promptText = colours.white
+    text = colours.white
+    if term.isColour!
+        promptText = colours.lime
+        text = colours.yellow
+    
     -- Table of commands
     commands = {
         exit: -> running = false
+        apis: ->
+            term.setTextColour text
+            for api, v in pairs getfenv 0
+                if type(v) == "table" and api != "_G"
+                    debug.write api.."\n"
+                    x, y = term.getCursorPos!
+                    w, h = term.getSize!
+                    if y == h
+                        os.pullEvent "key"
+        modules: (api) ->
+            if getfenv(0)[api] and api != "_G"
+                term.setTextColour text
+                for module, v in pairs getfenv(0)[api]
+                    if type(v) == "table"
+                        debug.write module.."\n"
+                        x, y = term.getCursorPos!
+                        w, h = term.getSize!
+                        if y == h
+                            os.pullEvent "key"
+            elseif api
+                debug.printError "Unknown api: "..api
+            else
+                debug.printError "Usage: modules <api>"
         shutdown: -> os.shutdown!
         reboot: -> os.reboot!
     }
+    commands.help = ->
+        term.setTextColour text
+        for command, _ in pairs commands
+            debug.write command.."\n"
+            x, y = term.getCursorPos!
+            w, h = term.getSize!
+            if y == h
+                os.pullEvent "key"
     
     run = (_command, ...) ->
         if commands[_command]
@@ -57,11 +97,12 @@ if not ok
     
     -- Read commands and execute them
     while running
-        term.setBackgroundColour colours.black
-        if term.isColour!
-            term.setTextColour colours.lime
+        term.setBackgroundColour backgroundColour
+        term.setTextColour promptText
+        if term.getCursorPos! > 1
+            debug.print!
         debug.write "> "
-        term.setTextColour colours.white
+        term.setTextColour userText
         
         s = debug.read nil, commandHistory
         table.insert commandHistory, s
