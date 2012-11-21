@@ -62,7 +62,7 @@ class Object
     eventHandler: (event, p1, p2, p3, p4, p5) =>
     
     redraw: =>
-        error "no redraw function exists for object type '"..@object_type.."'!"
+        error "No redraw function exists for object type '"..@object_type.."'!"
 objects.Object = Object
 
 class Label extends Object
@@ -99,7 +99,6 @@ class Button extends Object
     
     eventHandler: (event, p1, p2, p3, p4, p5) =>
         if event == "key" and p1 == keys.enter
-            printToMonitor "Selected "..currentObject.name
             return @action_listener!
     
     redraw: =>

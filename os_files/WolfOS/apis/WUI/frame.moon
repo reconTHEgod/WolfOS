@@ -32,7 +32,7 @@ class Frame
                 break
     
     redraw: =>
-        clear @background_colour
+        WUI.clear @background_colour
         
         for k, v in ipairs @objects
             term.setBackgroundColour @background_colour
@@ -79,8 +79,6 @@ class Frame
             @redraw!
             event, p1, p2, p3, p4, p5 = os.pullEvent!
             
-            printToMonitor (event or "").." "..(p1 or "").." "..(p2 or "").." "..(p3 or "")
-            
             switch event -- Allow for global event handling before object specific event handling
               when "key"
                     switch p1
@@ -88,12 +86,10 @@ class Frame
                             if not next!
                                 canMove = true
                                 while canMove do canMove = prev!
-                            printToMonitor currentObject.name
                       when 157 -- keys.rightCtrl doesn't work on my keyboard...?
                             if not prev!
                                 canMove = true
                                 while canMove do canMove = next!
-                            printToMonitor currentObject.name
                       when keys.insert
                             if getCursorState! == 0
                                 setCursorState 1
@@ -113,7 +109,6 @@ class Frame
                         
                         switch p1
                           when 1 -- Left click
-                                printToMonitor "Selected "..currentObject.name
                                 return currentObject\action_listener!
                           --when 2 -- Right click
                                 
