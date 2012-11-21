@@ -6,10 +6,10 @@ dataClient = nil
 dataServer = nil
 
 readData = (path) ->
-    return textutils.unserialize crypt.fromBase64 WUI.readAll path
+    return textutils.unserialize crypt.fromBase64 WDM.readAll path
 
 writeData = (path, table) ->
-    WUI.write path, crypt.toBase64 textutils.serialize table
+    WDM.write path, crypt.toBase64 textutils.serialize table
 
 export readTempData = (k) ->
     if k
