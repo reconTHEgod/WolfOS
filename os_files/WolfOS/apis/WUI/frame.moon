@@ -1,9 +1,7 @@
 -- WolfOS User Interface Library
 -- Frame Module
 
-frame = getfenv!
-
-class Frame
+export class Frame
     new: (frameID) =>
         @name = frameID
         @type = "frame"
@@ -114,4 +112,3 @@ class Frame
                                 
                           --when 3 -- Middle click
 
-frame.Frame = Frame

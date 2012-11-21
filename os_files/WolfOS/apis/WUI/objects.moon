@@ -1,8 +1,6 @@
 -- WolfOS User Interface Library
 -- Objects Module
 
-objects = getfenv!
-
 class Object
     _init: (objectID, objectType) =>
         @name = objectID
@@ -63,9 +61,8 @@ class Object
     
     redraw: =>
         error "No redraw function exists for object type '"..@object_type.."'!"
-objects.Object = Object
 
-class Label extends Object
+export class Label extends Object
     new: (labelID, w = 1) =>
         @_init labelID, "label"
         @width = w
@@ -85,9 +82,8 @@ class Label extends Object
                 x = (@x + @width) - #@text
         
         WUI.write @text\sub(1, @width), x, y
-objects.Label = Label
 
-class Button extends Object
+export class Button extends Object
     new: (buttonID, w = 1) =>
         @_init buttonID, "button"
         @width = w
@@ -114,9 +110,8 @@ class Button extends Object
         x, y = @x, @y
         x = @x + math.ceil (@width / 2) - (#@text / 2)
         WUI.write @text\sub(1, @width), x, y
-objects.Button = Button
 
-class TextField extends Object
+export class TextField extends Object
     new: (textFieldID, w = 1) =>
         @_init textFieldID, "text_field"
         @width = w
@@ -157,4 +152,3 @@ class TextField extends Object
                 x = (@x + @width) - #@text
         
         WUI.write @text\sub(1, @width), x, y
-objects.TextField = TextField
