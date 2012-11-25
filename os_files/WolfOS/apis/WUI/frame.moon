@@ -14,7 +14,7 @@ export class Frame
         elseif colours[c]
             @background_colour = colours[c]
     
-    add: (object, x = 1, y = 1, layer) =>
+    add: (object, x = 1, y = 1, layer = 0) =>
         object.x = x
         object.y = y
         
@@ -107,7 +107,8 @@ export class Frame
                         
                         switch p1
                           when 1 -- Left click
-                                return currentObject\action_listener!
+                                if currentObject\getEnabled! 
+                                    return currentObject\action_listener!
                           --when 2 -- Right click
                                 
                           --when 3 -- Middle click
