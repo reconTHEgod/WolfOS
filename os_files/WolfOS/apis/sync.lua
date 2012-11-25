@@ -23,12 +23,15 @@ local tMonitors = {}
 
 local nWidth, nHeight = 0, 0
 local nCursorX, nCursorY = 1, 1
+local bColor = false
 local bBlink = false
 
 local function resize()
 	local w, h
+	local c
 	for target,_ in pairs(tTargets) do
 		local _w, _h = target.getSize()
+		c = target.isColor()
 		if bMax then
 			if (w == nil or h == nil) or (_w * _h) > (w * h) then
 				w, h = _w, _h
@@ -42,6 +45,9 @@ local function resize()
 	if w and h then
 		nWidth = w
 		nHeight = h
+	end
+	if c then
+		bColor = c
 	end
 end
 
@@ -88,11 +94,11 @@ function tApi.setBackgroundColour(c)
 end
 
 function tApi.isColor()
-	call("isColor")
+	return bColor
 end
 
 function tApi.isColour()
-	call("isColour")
+	return bColor
 end
 
 function tApi.clear()
