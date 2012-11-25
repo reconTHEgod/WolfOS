@@ -1,6 +1,6 @@
 -- WolfOS User Interface Library
 
-colourScheme = {}
+export colourScheme = {}
 
 if term.isColour()
     colourScheme =
@@ -57,18 +57,18 @@ else
             text: colours.white
         }
 
-write = (t = "", x = 1, y = 1, ct, cb) ->
+export write = (t = "", x = 1, y = 1, ct, cb) ->
     term.setCursorPos x, y
     if ct then term.setTextColour ct
     if cb then term.setBackgroundColour cb
     term.write t
 
-clear = (cb) ->
+export clear = (cb) ->
     if cb then term.setBackgroundColour cb
     term.clear!
     term.setCursorPos 1, 1
 
-printToMonitor = (t) -> -- DEBUGGING FUNCTION ONLY!
+export printToMonitor = (t) -> -- DEBUGGING FUNCTION ONLY!
     mon = peripheral.wrap("left")
     mon.write t
     _, my = mon.getCursorPos!
@@ -79,13 +79,29 @@ printToMonitor = (t) -> -- DEBUGGING FUNCTION ONLY!
     else
         mon.setCursorPos 1, my + 1
 
+export loadGraphic = (path) ->
+    colours = {["0"]: colours.white, ["1"]: colours.orange, ["2"]: colours.magenta, ["3"]: colours.lightBlue, ["4"]: colours.yellow,
+        ["5"]: colours.lime, ["6"]: colours.pink, ["7"]: colours.grey, ["8"]: colours.lightGrey, ["9"]: colours.cyan,
+        a: colours.purple, b: colours.blue, c: colours.brown, d: colours.green, e: colours.red, f: colours.black}
+    raw = WDM.readToTable path
+    pixels = {}
+    for k, v in ipairs raw
+        pixels[k] = {}
+        for n = 1, #v
+            char = v\sub n, n
+            if char != " "
+                table.insert pixels[k], colours[char]
+            else
+                table.insert pixels[k], "alpha_channel"
+    return pixels
+
 -- Basic Functions
 
 cursorX, cursorY = 1, 1
 cursorState = -1
 
 export getCursorPos = ->
-    cursorX, cursorY
+    return cursorX, cursorY
 
 export setCursorPos = (x, y) ->
     if type(x) == "number" and type(y) == "number"
@@ -93,7 +109,7 @@ export setCursorPos = (x, y) ->
         cursorX, cursorY = x, y
 
 export getCursorState = ->
-    cursorState
+    return cursorState
 
 export setCursorState = (n) ->
     if type(n) == "number" and (n > -2 and n < 2)
@@ -101,8 +117,8 @@ export setCursorState = (n) ->
 
 export getScreenWidth = ->
     w = term.getSize!
-    w
+    return w
 
 export getScreenHeight = ->
     _, h = term.getSize!
-    h
+    return h

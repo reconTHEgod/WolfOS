@@ -45,6 +45,18 @@ class Object
         if s == "left" or s == "center" or s == "right"
             @text_align = s
     
+    setTextColour: (c) =>
+        if type(c) == "number"
+            @colours.text = c
+        elseif colours[c]
+            @colours.text = colours[c]
+    
+    setBackgroundColour: (c) =>
+        if type(c) == "number"
+            @colours.background = c
+        elseif colours[c]
+            @colours.background = colours[c]
+    
     getEnabled: =>
         @is_enabled
     
@@ -88,10 +100,10 @@ export class Button extends Object
         @_init buttonID, "button"
         @width = w
         @height = 1
-        @colours.text = colourScheme.button.text
-        @colours.background = colourScheme.button.background
-        @colours.focus.text = colourScheme.button.focus.text
-        @colours.focus.background = colourScheme.button.focus.background
+        @colours.text = WUI.colourScheme.button.text
+        @colours.background = WUI.colourScheme.button.background
+        @colours.focus.text = WUI.colourScheme.button.focus.text
+        @colours.focus.background = WUI.colourScheme.button.focus.background
     
     eventHandler: (event, p1, p2, p3, p4, p5) =>
         if event == "key" and p1 == keys.enter
@@ -152,3 +164,28 @@ export class TextField extends Object
                 x = (@x + @width) - #@text
         
         WUI.write @text\sub(1, @width), x, y
+
+export class Graphic extends Object
+    new: (graphicID, w = 1, h = 1) =>
+        @_init graphicID, "graphic"
+        @width = w
+        @height = h
+        @setEnabled false
+    
+    setGraphic: (path) =>
+        @pixels = WUI.loadGraphic path
+    
+    eventHandler: (event, p1, p2, p3, p4, p5) =>
+        if event == "key" and p1 == keys.enter
+            return @action_listener!
+    
+    redraw: =>
+        for h = 1, @height
+            for w = 1, @width
+                if @pixels[h][w] != "alpha_channel"
+                    ct = @pixels[h][w]
+                    cb = ct
+                    WUI.write " ", @x + w - 1, @y + h - 1, ct, cb
+                
+                if not @pixels[h][w + 1] then break
+            if not @pixels[h + 1] then break
