@@ -1,7 +1,7 @@
 -- WolfOS BIOS
 
 -- WolfOS version
-local _WOLFOS_VERSION = "2.0.0"
+local _WOLFOS_VERSION = "2.0.0_dev"
 
 function os.getVersion()
 	return _WOLFOS_VERSION
@@ -392,14 +392,14 @@ function os.run(_env, _path, ...)
         end)
         if not ok then
         	if err and err ~= "" then
-				error(err..": ".._path, 0)
+				error(err..": ".._path)
 	        end
         	return false
         end
         return true
     end
     if err and err ~= "" then
-		error(err..": ".._path, 0)
+		error(err..": ".._path)
 	end
     return false
 end
@@ -426,7 +426,7 @@ local function loadModule(_path)
 		setfenv(fnModule, env)
 		fnModule()
 	else
-		error(err..": ".._path, 0)
+		error(err..": ".._path)
 	end
 	
 	local module = {}
@@ -454,7 +454,7 @@ function os.loadAPI(_path)
 		setfenv(fnAPI, env)
 		fnAPI()
 	else
-		error(err..": ".._path, 0)
+		error(err..": ".._path)
 	end
 	
 	local API = {}
