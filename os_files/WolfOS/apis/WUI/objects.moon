@@ -106,8 +106,13 @@ export class Button extends Object
         @colours.focus.background = WUI.colourScheme.button.focus.background
     
     eventHandler: (event, p1, p2, p3, p4, p5) =>
-        if event == "key" and p1 == keys.enter
-            return @action_listener!
+        switch event 
+          when "key"
+                if p1 == keys.enter
+                    return @action_listener!
+          when "mouse_click"
+                if p1 == 1 -- Left click
+                    return @action_listener!
     
     redraw: =>
         t = @colours.text
@@ -129,6 +134,8 @@ export class TextField extends Object
         @width = w
         @height = 1
         @cursor_pos = 1
+        @cursorX = @x
+        @cursorY = @y
         @colours.text = WUI.colourScheme.textField.text
         @colours.background = WUI.colourScheme.textField.background
     
@@ -140,9 +147,16 @@ export class TextField extends Object
                         @cursor_pos = 1
                   when keys["end"] -- Circumvents strangeness
                         @cursor_pos = #@text + 1
+                  when keys.left
+                        if @cursor_pos > 1
+                            @cursor_pos -= 1
+                  when keys.right
+                        if @cursor_pos < (#@text + 1)
+                            @cursor_pos += 1
                   when keys.backspace
-                        @text = @text\sub(1, @cursor_pos - 2)..@text\sub(@cursor_pos, #@text)
-                        @cursor_pos -= 1
+                        if @cursor_pos > 1
+                            @text = @text\sub(1, @cursor_pos - 2)..@text\sub(@cursor_pos, #@text)
+                            @cursor_pos -= 1
                   when keys.delete
                         @text = @text\sub(1, @cursor_pos - 1)..@text\sub(@cursor_pos + 1, #@text)
                   when keys.enter
@@ -158,12 +172,37 @@ export class TextField extends Object
         
         x, y = @x, @y
         switch @text_align
-            when "center"
+          when "center"
                 x = @x + math.ceil (@width / 2) - (#@text / 2)
-            when "right"
+          when "right"
                 x = (@x + @width) - #@text
         
         WUI.write @text\sub(1, @width), x, y
+        @cursorX, @cursorY = x + @cursor_pos - 1, y
+
+export class PasswordField extends TextField
+    new: (passwordFieldID, w = 1) =>
+        @_init passwordFieldID, "password_field"
+        @width = w
+        @height = 1
+        @cursor_pos = 1
+        @cursorX = @x
+        @cursorY = @y
+        @colours.text = WUI.colourScheme.textField.text
+        @colours.background = WUI.colourScheme.textField.background
+    
+    redraw: =>
+        WUI.write string.rep(" ", @width), @x, @y, @colours.text, @colours.background
+        
+        x, y = @x, @y
+        switch @text_align
+          when "center"
+                x = @x + math.ceil (@width / 2) - (#@text / 2)
+          when "right"
+                x = (@x + @width) - #@text
+        
+        WUI.write string.rep("*", #@text\sub(1, @width)), x, y
+        @cursorX, @cursorY = x + @cursor_pos - 1, y
 
 export class Graphic extends Object
     new: (graphicID, w = 1, h = 1) =>

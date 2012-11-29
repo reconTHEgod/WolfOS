@@ -8,6 +8,10 @@ export class Frame
         @objects = {}
         @background_colour = WUI.colourScheme.screen.background
     
+    setStatusBar: (statusbar) =>
+        --if statusbar["type"] == "status_bar"
+        @status_bar = statusbar
+    
     setBackgroundColour: (c) =>
         if type(c) == "number"
             @background_colour = c
@@ -30,7 +34,11 @@ export class Frame
                 break
     
     redraw: =>
+        term.setCursorBlink false
         WUI.clear @background_colour
+        
+        if @status_bar
+            @status_bar\redraw!
         
         for k, v in ipairs @objects
             term.setBackgroundColour @background_colour
@@ -73,43 +81,89 @@ export class Frame
         currentObject = @objects[n]
         if not currentObject then next!
         
-        while true
-            @redraw!
-            event, p1, p2, p3, p4, p5 = os.pullEvent!
+        @redraw!
             
-            switch event -- Allow for global event handling before object specific event handling
-              when "key"
-                    switch p1
-                      when keys.leftCtrl
-                            if not next!
-                                canMove = true
-                                while canMove do canMove = prev!
-                      when 157 -- keys.rightCtrl doesn't work on my keyboard...?
-                            if not prev!
-                                canMove = true
-                                while canMove do canMove = next!
-                      when keys.insert
-                            if getCursorState! == 0
-                                setCursorState 1
-                            else
-                                setCursorState 0
-                
+        if currentObject.object_type == "text_field" or currentObject.object_type == "password_field"
+            term.setTextColour currentObject.colours.text
+            term.setCursorPos currentObject.cursorX, currentObject.cursorY
+            term.setCursorBlink true
+        else
+            term.setCursorBlink false
+            
+        event, p1, p2, p3, p4, p5 = os.pullEvent!
+            
+        switch event -- Allow for global event handling before object specific event handling
+          when "key"
+                switch p1
+                  when keys.leftCtrl
+                        if not next!
+                            canMove = true
+                            while canMove do canMove = prev!
+                  when 157 -- keys.rightCtrl doesn't work on my keyboard...?
+                        if not prev!
+                            canMove = true
+                            while canMove do canMove = next!
+                  --when keys.insert
+                        --if getCursorState! == 0
+                            --setCursorState 1
+                        --else
+                            --setCursorState 0
+        
 
-                                
-              when "mouse_click"
-                    _n, object = mouseoverObjectPos p2, p3
-                    if object
-                        if currentObject then currentObject\setFocus false
-                        currentObject = object
-                        currentObject\setFocus true
-                        n = _n
-                        @current_object = n
-                        
-                        switch p1
-                          when 1 -- Left click
-                                if currentObject\getEnabled! 
-                                    return currentObject\action_listener!
-                          --when 2 -- Right click
-                                
-                          --when 3 -- Middle click
+            
+          when "mouse_click"
+                _n, object = mouseoverObjectPos p2, p3
+                if object
+                    if currentObject then currentObject\setFocus false
+                    currentObject = object
+                    currentObject\setFocus true
+                    n = _n
+                    @current_object = n
+                    
+                    @redraw!
+                    sleep 0.02
+        
+        currentObject\eventHandler event, p1, p2, p3, p4, p5
 
+export class StatusBar
+    new: (objectID) =>
+        @name = objectID
+        @type = "status_bar"
+        @width = WUI.getScreenWidth!
+        @height = 1
+        @text = 
+            clock: "00:00 AM"
+            user: ""
+            menu: {}
+        @cursor_pos = 0
+        @colours = 
+            text: WUI.colourScheme.statusbar.text
+            background: WUI.colourScheme.statusbar.background
+        @clock_twentyfour = false
+    
+    setUserText: (t) =>
+        if type(t) == "string"
+            @text.user = t\sub 1, 16
+            
+    runClock: =>
+        time = nil
+        while true
+            _time = textutils.formatTime os.time!, @clock_twentyfour
+            if _time != time
+                time = _time
+                @text.clock = time
+                @redraw!
+            sleep 0.1
+    
+    redraw: =>
+        WUI.write string.rep(" ", @width), 1, 1, @colours.text, @colours.background
+        
+        -- TODO: Menu headers printed here
+        
+        s = @text.user
+        if #@text.user > 0
+            s ..= " - "..@text.clock
+        else
+            s = @text.clock
+        x = @width - #s + 1
+        WUI.write s, x, 1, @colours.text, @colours.background
