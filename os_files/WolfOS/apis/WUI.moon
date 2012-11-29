@@ -6,27 +6,27 @@ if term.isColour()
     colourScheme =
         cursor: colours.white
         screen: {
-            background: colours.blue
-            text: colours.white
+            background: colours.lightGrey
+            text: colours.grey
         }
         statusbar: {
-            background: colours.white
-            text: colours.blue
+            background: colours.grey
+            text: colours.white
         }
         label: {
-            background: colours.blue
-            text: colours.white
+            background: colours.lightGrey
+            text: colours.grey
         }
         button: {
-            background: colours.blue
-            text: colours.white
+            background: colours.lightGrey
+            text: colours.grey
             focus: {
-                background: colours.white
-                text: colours.blue
+                background: colours.grey
+                text: colours.lightGrey
             }
         }
         textField: {
-            background: colours.blue
+            background: colours.grey
             text: colours.white
         }
 else
@@ -53,8 +53,8 @@ else
             }
         }
         textField: {
-            background: colours.black
-            text: colours.white
+            background: colours.white
+            text: colours.black
         }
 
 export write = (t = "", x = 1, y = 1, ct, cb) ->
