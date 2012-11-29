@@ -5,10 +5,10 @@ dataTemp = {}
 dataClient = nil
 dataServer = nil
 
-readData = (path) ->
+export readData = (path) ->
     return textutils.unserialize crypt.fromBase64 WDM.readAll path
 
-writeData = (path, table) ->
+export writeData = (path, table) ->
     WDM.write path, crypt.toBase64 textutils.serialize table
 
 export readTempData = (k) ->
