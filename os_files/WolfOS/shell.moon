@@ -4,8 +4,9 @@ ok, err = pcall ->
     if not os.getComputerLabel!
         os.setComputerLabel "ID# "..os.getComputerID!
     
-    -- API loading
     debug.print "Initializing WolfOS "..os.getVersion!.."...\n"
+    
+    -- API loading
     debug.print "Loading System APIs...\n"
     sleep 0.01
     for _, api in ipairs fs.list os.getSystemDir "apis"
@@ -32,7 +33,7 @@ ok, err = pcall ->
             debug.print "Opened modem port: "..modemPort.."\n"
     
     -- Loading Server modules
-    debug.print "Initializing Server...\n"
+    debug.print "Loading Server modules...\n"
     loadModule = (path, port) ->
         name = fs.getName path
         WDM.writeTempData name\sub(1, (string.find(name, "%.") or #moduleName + 1) - 1), "network_port: 0"
@@ -50,7 +51,10 @@ ok, err = pcall ->
     
     -- Syncing monitor ports
     debug.print "Initializing monitors...\n"
+    x, y = term.getCursorPos!
+    
     sync.redirect true
+    term.setCursorPos x, y
     
     monitors = WDM.data.readClientData "monitors"
     if not monitors
@@ -65,8 +69,11 @@ ok, err = pcall ->
             monitors[monitorPort] = nil
     WDM.data.writeClientData monitors, "monitors"
     
-    debug.print "\nLoading User Interface..."
+    debug.write "\nLoading User Interface..."
     sleep 0.01
+    
+    if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
+        error "Screen dimensions less than 51x19 not supported"
     
     -- Display boot logo
     frame = WUI.frame.Frame "logo_frame"
@@ -91,8 +98,12 @@ ok, err = pcall ->
     frame\redraw!
     sleep 3
     
+    export _STATUSBAR = WUI.frame.StatusBar "status_bar"
+    
     parallel.waitForAny -> 
-            os.run {}, os.getSystemDir("client").."startup.lua",
+            os.run {_STATUSBAR: _STATUSBAR}, os.getSystemDir("client").."startup.lua",
+        -> -- Running clock in status bar
+            _STATUSBAR\runClock!,
         -> -- Core Server module (network_port: 0)
             while true
                 if WDM.data.readClientData "online"
@@ -107,120 +118,169 @@ ok, err = pcall ->
                     sleep 2,
         unpack modules
 
--- Drop to command line if init failed and display error
+-- Display error if OS errored
+term.setBackgroundColour colours.black
+term.setTextColour colours.white
+debug.clear!
 if not ok
-    running = true
-    commandHistory = {}
-    
-    -- Command line colours
-    backgroundColour = colours.black
-    userText = colours.white
-    promptText = colours.white
-    text = colours.white
-    if term.isColour!
-        promptText = colours.lime
-        text = colours.yellow
-    
-    list = (table) ->
-        for k, v in ipairs table
-            debug.print v
-            x, y = term.getCursorPos!
-            w, h = term.getSize!
-            if y == h
-                term.write "Press any key to continue..."
-                os.pullEvent "key"
-                term.clearLine!
-                term.setCursorPos 1, y
-    
-    -- Table of commands
-    commands = {
-        exit: -> running = false
-        version: -> debug.print "WolfOS "..os.getVersion!
-        clear: ->
-            term.clear!
-            term.setCursorPos 1, 1
-        apis: ->
-            apis = {}
-            for k, v in pairs getfenv 0
-                if type(v) == "table" and k != "_G"
-                    table.insert apis, k
-            list apis
-                    
-        modules: (api) ->
-            if getfenv(0)[api] and api != "_G"
-                modules = {}
-                for k, v in pairs getfenv(0)[api]
-                    if type(v) == "table"
-                        table.insert modules, k
-                list modules
-            elseif api
-                debug.printError "Unknown api: "..api
-            else
-                debug.printError "Usage: modules <api>"
-        functions: (api, module) ->
-            t = getfenv(0)[api]
-            if t and api != "_G"
-                if module
-                    t = t[module]
-                if t
-                    functions = {}
-                    for k, v in pairs t
-                        if type(v) == "function"
-                            table.insert functions, k
-                    list functions
-                elseif module
-                    debug.printError "Unknown module: "..api.."."..module
-            elseif api
-                debug.printError "Unknown api: "..api
-            else
-                debug.printError "Usage: functions <api> [module]"
-        shutdown: -> os.shutdown!
-        reboot: -> os.reboot!
-    }
-    commands.help = ->
-        _commands = {}
-        for k, _ in pairs commands
-            table.insert _commands, k
-        list _commands
-    
-    run = (_command, ...) ->
-        if commands[_command]
-            return commands[_command] ...
-        else
-            debug.printError "Unknown command: ".._command
-    
-    parseLine = (_line) ->
-        words = {}
-        for match in string.gmatch _line, "[^ \t]+"
-            table.insert words, match
-        
-        command = words[1]
-        if command
-            return run command, unpack words, 2
-    
-    term.setBackgroundColour backgroundColour
-    term.setTextColour userText
-    debug.clear!
     if err
         debug.print "An error occured during initialization:"
         debug.printError err
     else
         debug.print "An unknown error occured during initialization."
-    debug.print "\nDropping to WolfOS command line.\nType 'help' to view a list of available commands.\n"
+    debug.print!
+
+-- Drop to command line
+debug.print "Dropping to WolfOS command line.\nType 'help' to view a list of available commands.\n"
+
+running = true
+commandHistory = {}
+currentUser = nil
     
-    -- Read commands and execute them
-    while running
-        term.setBackgroundColour backgroundColour
-        term.setTextColour promptText
-        if term.getCursorPos! > 1
-            debug.print!
-        debug.write "> "
-        term.setTextColour userText
+-- Command line colours
+backgroundColour = colours.black
+userText = colours.white
+promptText = colours.white
+text = colours.white
+if term.isColour!
+    promptText = colours.lime
+    text = colours.yellow
+    
+list = (table) ->
+    for k, v in ipairs table
+        debug.print v
+        x, y = term.getCursorPos!
+        w, h = term.getSize!
+        if y == h
+            term.write "Press any key to continue..."
+            os.pullEvent "key"
+            term.clearLine!
+            term.setCursorPos 1, y
+    
+-- Table of commands
+commands = {
+    exit: -> running = false
+    version: -> debug.print "WolfOS "..os.getVersion!
+    clear: ->
+        term.clear!
+        term.setCursorPos 1, 1
+    apis: ->
+        apis = {}
+        for k, v in pairs getfenv 0
+            if type(v) == "table" and k != "_G"
+                table.insert apis, k
+        list apis
+    modules: (api) ->
+        if getfenv(0)[api] and api != "_G"
+            modules = {}
+            for k, v in pairs getfenv(0)[api]
+                if type(v) == "table"
+                    table.insert modules, k
+            list modules
+        elseif api
+            debug.printError "Unknown api: "..api
+        else
+            debug.printError "Usage: modules <api>"
+    functions: (api, module) ->
+        t = getfenv(0)[api]
+        if t and api != "_G"
+            if module
+                t = t[module]
+            if t
+                functions = {}
+                for k, v in pairs t
+                    if type(v) == "function"
+                        table.insert functions, k
+                list functions
+            elseif module
+                debug.printError "Unknown module: "..api.."."..module
+        elseif api
+            debug.printError "Unknown api: "..api
+        else
+            debug.printError "Usage: functions <api> [module]"
+    shutdown: -> os.shutdown!
+    reboot: -> os.reboot!
+}
+commands.help = ->
+    _commands = {}
+    for k, _ in pairs commands
+        table.insert _commands, k
+    list _commands
+
+if WAU and hash
+    commands.users = ->
+        t = WAU.getUsers!
+        if t
+            users = {}
+            for k, v in ipairs t
+                table.insert users, v.uid..": "..v.name.." ("..v.type..")"
+            list users
+    commands.login = (name, pass) ->
+        if name and pass
+            if not currentUser
+                ok, p1 = WAU.checkLogin name, hash.sha256 pass
+                if ok
+                    currentUser = p1
+                    term.clear!
+                    term.setCursorPos 1, 1
+                else
+                    debug.printError "An error occured during login: "..p1
+            else
+                debug.printError "You are already logged in!"
+        else
+            debug.printError "Usage: login <name> <pass>"
+    commands.logout = ->
+        if currentUser
+            currentUser = nil
+        else
+            debug.printError "You are not logged in!"
+    commands.createUser = (name, pass) ->
+        if name and pass
+            if currentUser and currentUser.type == "admin"
+                WAU.createUser name, hash.sha256 pass
+            else
+                debug.printError "You must be logged into an admin account to perform this action!"
+        else
+            debug.printError "Usage: createUser <name> <pass>"
+    commands.deleteUser = (user) ->
+        if user
+            if currentUser and currentUser.type == "admin"
+                WAU.removeUser user
+                if user == currentUser.name or user == currentUser.uid
+                    currentUser = nil
+            else
+                debug.printError "You must be logged into an admin account to perform this action!"
+        else
+            debug.printError "Usage: deleteUser <name|uid>"
+    
+run = (_command, ...) ->
+    if commands[_command]
+        return commands[_command] ...
+    else
+        debug.printError "Unknown command: ".._command
+    
+parseLine = (_line) ->
+    words = {}
+    for match in string.gmatch _line, "[^ \t]+"
+        table.insert words, match
         
-        s = debug.read nil, commandHistory
-        table.insert commandHistory, s
+    command = words[1]
+    if command
+        return run command, unpack words, 2
+    
+-- Read commands and execute them
+while running
+    term.setBackgroundColour backgroundColour
+    term.setTextColour promptText
+    if term.getCursorPos! > 1
+        debug.print!
+    debug.write "> "
+    term.setTextColour userText
         
-        term.setTextColour text
-        parseLine s
+    s = debug.read nil, commandHistory
+    table.insert commandHistory, s
+        
+    term.setTextColour text
+    parseLine s
 
 os.shutdown! -- Just in case.
