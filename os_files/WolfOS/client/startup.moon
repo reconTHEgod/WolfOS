@@ -64,8 +64,8 @@ startup_frame\add startup_login_label, 1, ch - 1
 startup_frame\add startup_password_prompt, cw, ch
 startup_frame\add startup_password, cw, ch + 1
 startup_frame\add startup_status, 1, ch + 3
-startup_frame\add startup_login, 1, h - 5
-startup_frame\add startup_reboot, 1, h - 3
+startup_frame\add startup_login, 1, h - 4
+startup_frame\add startup_reboot, 1, h - 2
 startup_frame\add startup_shutdown, 1, h - 1
 
 while startup_loop == true
@@ -84,5 +84,6 @@ WDM.data.writeTempData user.uid, "current_uid"
 WDM.data.writeTempData user.name, "current_name"
 WDM.data.writeTempData user.hash, "current_hash"
 WDM.data.writeTempData user.type, "current_type"
+_STATUSBAR\setUserText user.name
 
-os.run {}, os.getSystemDir("client").."menuMain.lua"
+os.run {_STATUSBAR: _STATUSBAR}, os.getSystemDir("client").."menuMain.lua"
