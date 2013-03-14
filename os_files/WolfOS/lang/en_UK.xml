@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<properties version="1.0">
+	<comment>English (UK) Localization File</comment>
+	
+	<entry key="error.shell.screen_dims">Screen dimensions less than 51x19 not supported</entry>
+	<entry key="error.shell.screen_colour">Monochrome screen not supported</entry>
+</properties>
