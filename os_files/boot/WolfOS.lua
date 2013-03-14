@@ -1,6 +1,6 @@
 -- WolfOS BIOS
 
--- WolfOS Version
+-- WolfOS version
 local _WOLFOS_VERSION = "2.0.0_a1"
 
 function os.getVersion()
@@ -9,7 +9,7 @@ end
 
 -- WolfOS directory mappings
 local _root = "/WolfOS/"
-local _apis, _client, _server, _data, _apps = _root.."apis/", _root.."client/", _root.."server/", _root.."data/", _root.."applications/"
+local _apis, _client, _server, _data, _lang, _apps = _root.."apis/", _root.."client/", _root.."server/", _root.."data/", _root.."lang/", _root.."applications/"
 local _controlPanel, _users = _client.."controlPanel/", _data.."users/"
 local _WOLFOS_DIRS = {
 	root = _root,
@@ -17,12 +17,16 @@ local _WOLFOS_DIRS = {
 	client = _client,
 	server = _server,
 	data = _data,
+	lang = _lang,
 	applications = _apps,
 	controlPanel = _controlPanel,
 	users = _users,
 }
 
 function os.getSystemDir(k)
+	if not k then
+		return _WOLFOS_DIRS
+	end
 	return _WOLFOS_DIRS[k]
 end
 
@@ -430,6 +434,24 @@ do
 	end
 	debug.printError = printError
 	
+	local function printToMonitor(side, text)
+		if peripheral.getType(side) == "monitor" then
+			m = peripheral.wrap(side)
+			m.clearLine()
+			m.write(text)
+			
+			x, y = m.getCursorPos()
+			w, h = m.getSize()
+			if y < h then
+				m.setCursorPos(1, y + 1)
+			else
+				m.scroll(1)
+				m.setCursorPos(1, h)
+			end
+		end
+	end
+	debug.printToMonitor = printToMonitor
+	
 	local function read(_replaceChar, _history)
 		term.setCursorBlink(true)
 		
@@ -594,12 +616,65 @@ do
 	end
 	
 	function os.pullEvent(_filter)
-		local event, p1, p2, p3, p4, p5 = os.pullEventRaw(_filter)
-		if event == "terminate" then
-			printError("Terminated")
-			error()
+		local eventData = {os.pullEventRaw(_filter)}
+		if eventData[1] == "terminate" then
+			error("Terminated", 0)
 		end
-		return event, p1, p2, p3, p4, p5
+		return unpack(eventData)
+	end
+	
+	local processes = {}
+	local processCount = 0
+	local function createProcess(process)
+		if ftype("function", process) then
+			return coroutine.create(process)
+		end
+	end
+	
+	function os.addProcess(key, process)
+		if ftype("string, function", key, process) then
+			table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
+			processCount = processCount + 1
+			return true
+		end
+		return false
+	end
+	
+	function os.removeProcess(key)
+		if ftype("string", key) then
+			os.queueEvent("terminate_process", key)
+		end
+	end
+	
+	function os.runProcesses()
+		local filters = {}
+		local eventData = {}
+		while true do
+			for i = 1, processCount do
+				v = processes[i]
+				if v then
+					if filters[v.thread] == nil or filters[v.thread] == "terminate" then
+						ok, param = coroutine.resume(v.thread, unpack(eventData))
+						if not ok then
+							return false, "Process: "..v.key..": "..param
+						else
+							filters[v.thread] = param
+						end
+					end
+				end
+			end
+			for i = 1, processCount do
+				v = processes[i]
+				if v and (coroutine.status(v.thread) == "dead" or (eventData[1] == "terminate_process" and eventData[2] == v.key)) then
+					table.remove(processes, i)
+					processCount = processCount - 1
+					if processCount < 1 then
+						return true, nil
+					end
+				end
+			end
+			eventData = {os.pullEventRaw()}
+		end
 	end
 	
 	function os.run(_env, _path, ...)
@@ -644,22 +719,13 @@ do
 			coroutine.yield()
 		end
 	end
-end
-
--- Install the lua part of the peripheral API
-do
-	peripheral.wrap = function(_side)
-		if peripheral.isPresent(_side) then
-			local methods = peripheral.getMethods(_side)
-			local result = {}
-			for n, method in ipairs(methods) do
-				result[method] = function(...)
-					return peripheral.call(_side, method, ...)
-				end
-			end
-			return result
+	
+	local nativeReboot = os.reboot
+	function os.reboot()
+		nativeReboot()
+		while true do
+			coroutine.yield()
 		end
-		return nil
 	end
 end
 
