@@ -340,6 +340,7 @@ do
 	
 	local term = require("rom.apis.term")
 	local keys = require("rom.apis.keys")
+	local peripheral = require("rom.apis.peripheral")
 	
 	local function clear(x, y)
 		if not x then
@@ -646,7 +647,15 @@ do
 		end
 	end
 	
-	function os.runProcesses()
+	function getProcesses()
+		local _processes = {}
+		for k, v in ipairs(processes) do
+			table.insert(_processes, v.key)
+		end
+		return _processes
+	end
+	
+	function os.startProcesses()
 		local filters = {}
 		local eventData = {}
 		while true do
