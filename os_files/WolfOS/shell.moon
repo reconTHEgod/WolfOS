@@ -50,11 +50,26 @@ ok, err = pcall ->
     if not term.isColour!
         error WUI.getLocalisedString "error.shell.screen_colour"
     
-    _MAIN_THREAD = ->
+    -- Registering network address
+    WDM.writeTempData "000.".."00"..os.getComputerID!, "address"
+    
+    _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
     
-    if os.addProcess("MAIN_THREAD", _MAIN_THREAD)
-        ok, err = os.runProcesses!
+    _CORE_NETWORK_THREAD = ->
+        while true
+            if WDM.readClientData "online"
+                data = WNC.listen(WDM.readClientData("modem_port"), 0, 2) or {}
+                
+                switch data[1]
+                    when "test_connection"
+                        WNC.send WDM.readClientData("modem_port"), data.senderAddress, "connection_response"
+            else
+                break
+        os.removeProcess "CORE_NETWORK_THREAD"
+    
+    if os.addProcess("SYSTEM_THREAD", _SYSTEM_THREAD) and os.addProcess("CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD)
+        ok, err = os.startProcesses!
         if not ok
             error err
 
@@ -255,38 +270,83 @@ commands.help = ->
             table.insert _commands, k
     list _commands
 
+-- Data Handling command set
+pcall ->
+    WDM = require os.getSystemDir("apis").."WDM..lua"
+    commands.data = {
+        read: (type, key) ->
+            if ftype "?string, ?string", type, key
+                data = {}
+                switch type
+                    when "temp"
+                        data = WDM.readTempData!
+                    when "client"
+                        data = WDM.readClientData!
+                    when "server"
+                        data = WDM.readServerData!
+                    else
+                        for k, v in pairs WDM.readTempData! do data[k] = v
+                        for k, v in pairs WDM.readClientData! do data[k] = v
+                        for k, v in pairs WDM.readServerData! do data[k] = v
+                
+                if data[key]
+                    print key..": "..tostring data[key]
+                else
+                    _data = {}
+                    for k, v in pairs data
+                        table.insert _data, k..": "..tostring v
+                    list _data
+            else
+                printError "Usage: data read [temp|client|server] [key]"
+        
+        write: (type, key, value) ->
+            if currentUser and currentUser.type == "admin"
+                if ftype "string, string, string", type, key, value
+                    if value == "true" then value = true
+                    elseif value == "false" then value = false
+                    
+                    switch type
+                        when "temp"
+                            WDM.writeTempData value, key
+                        when "client"
+                            WDM.writeClientData value, key
+                        when "server"
+                            WDM.writeServerData value, key
+                        else
+                            printError "Usage: data write <temp|client|server> <key> <value>"
+                else
+                    printError "Usage: data write <temp|client|server> <key> <value>"
+            else
+                printError "You do not have permission to perform this action!"
+    }
+
 -- HyperPaw Network command set
 pcall ->
     WNC = require os.getSystemDir("apis").."WNC..lua"
     commands.network = {
-        send: (modemPort, channel, replyChannel, ...) ->
-            channel, replyChannel = tonumber(channel), tonumber(replyChannel)
-            if ftype "+number, +number", channel, replyChannel
-                return WNC.send modemPort, channel, replyChannel, ...
+        send: (modemPort, address, ...) ->
+            if ftype "string, string", modemPort, address
+                return WNC.send modemPort, address, ...
             else
-                printError "Usage: network send <modem port> <channel> <replyChannel> [...]"
+                printError "Usage: network send <modem port> <address> [...]"
         
         listen: (modemPort, channel, timeout) ->
             channel, timeout = tonumber(channel), tonumber(timeout)
-            if ftype "+number, ?+number", channel, timeout
-                display = (...) ->
-                    args = {...}
-                    replyChannel, distance = table.remove(args, 1), table.remove(args, 1)
-                    
-                    if replyChannel and distance
-                        data = {
-                            "Reply channel: "..replyChannel
-                            "Distance: "..distance
-                        }
-                        
-                        for k, v in pairs args
-                            table.insert data, "Packet "..k..": "..tostring(v)
-                        
-                        list data, false
-                    else
-                        printError "Timed out"
+            if ftype "string, +number, ?+number", modemPort, channel, timeout
+                data = WNC.listen modemPort, channel, timeout
                 
-                display WNC.listen modemPort, channel, timeout
+                if data
+                    display = {
+                        "Sender: "..data.senderAddress
+                        "Distance: "..data.distance
+                    }
+                    
+                    for k, v in ipairs data
+                        table.insert display, "Packet "..k..": "..tostring(v)
+                        
+                    list display, false
+                else
+                    printError "Timed out"
             else
                 printError "Usage: network listen <modem port> <channel> <timeout>"
     }
