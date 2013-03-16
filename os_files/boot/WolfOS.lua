@@ -647,7 +647,7 @@ do
 		end
 	end
 	
-	function getProcesses()
+	function os.getProcesses()
 		local _processes = {}
 		for k, v in ipairs(processes) do
 			table.insert(_processes, v.key)
@@ -699,26 +699,24 @@ do
 			end)
 			if not ok then
 				if err and err ~= "" then
-					error(err, 0)
+					error(err, 2)
 				end
 				return false
 			end
 			return true
 		end
 		if err and err ~= "" then
-			error(err..": ".._path, 0)
+			error(err..": ".._path, 2)
 		end
 		return false
 	end
 	
 	function os.loadAPI() -- @DEPRECATED in favour of require() and include()
-		printError("Deprecated: os.loadAPI, use require() or include() instead")
-		error()
+		error("Deprecated: os.loadAPI, use require() or include() instead", 2)
 	end
 	
 	function os.unloadAPI() -- @DEPRECATED for redundancy due to use of require() and include()
-		printError("Deprecated: os.unloadAPI, no replacement needed [see require() and include()]")
-		error()
+		error("Deprecated: os.unloadAPI, no replacement needed [see require() and include()]", 2)
 	end
 	
 	local nativeShutdown = os.shutdown
