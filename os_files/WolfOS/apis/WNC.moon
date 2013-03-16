@@ -1,14 +1,23 @@
 -- WolfOS Network Communication (HyperPaw)
 
+peripheral = require "rom.apis.peripheral"
 textutils = require "rom.apis.textutils"
 crypt = require os.getSystemDir("apis").."crypt..lua"
+WDM = require os.getSystemDir("apis").."WDM..lua"
 
 _VALID_PORTS = {top: true, bottom: true, front: true, back: true, left: true, right: true}
 
-export send = (modemPort, channel, replyChannel, ...) ->
-    ok, err = ftype "string, +number, +number", modemPort, channel, replyChannel
+export send = (modemPort, address, ...) ->
+    ok, err = ftype "string, string", modemPort, address
     if not ok
         error err, 2
+    
+    channel = tonumber address\gmatch("(%d+)$")!
+    data = {senderAddress: WDM.readTempData("address")..":"..channel, receiverAddress: address}
+    
+    packets = {...}
+    for k, v in ipairs packets
+        table.insert data, v
     
     modem = {}
     if _VALID_PORTS[modemPort]
@@ -22,7 +31,7 @@ export send = (modemPort, channel, replyChannel, ...) ->
     if not modem.isOpen channel
         modem.open channel
     
-    modem.transmit channel, replyChannel, crypt.toBase64 textutils.serialize {...}
+    modem.transmit channel, channel, crypt.toBase64 textutils.serialize data
     modem.close channel
     
 
@@ -52,13 +61,14 @@ export listen = (modemPort, channel, timeout) ->
         _event, _modemPort, _channel, _replyChannel, _data, _distance = os.pullEvent!
         
         if _event == "modem_message"
-            data = crypt.fromBase64 _data
+            data = textutils.unserialize crypt.fromBase64 _data
+            data.distance = _distance
             
-            if _channel == channel
+            if data.receiverAddress == WDM.readTempData("address")..":"..channel
                     modem.close channel
-                    return _replyChannel, _distance, unpack(textutils.unserialize(data))
+                    return data, nil
         elseif _event == "timer"
             _timer = _modemPort
             if _timer == timer
                 modem.close channel
-                return nil, nil, "timeout"
+                return nil, "timeout"
