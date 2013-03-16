@@ -31,7 +31,7 @@ ok, err = pcall ->
     if not WDM.exists os.getSystemDir("data").."users.dat"
         WDM.write os.getSystemDir("data").."users.dat", crypt.toBase64 textutils.serialize {}
     
-    print "Loading Language Localisation..."
+    print "\nLoading Language Localisation...\n"
     sleep 0.01
     
     loc = WDM.readClientData "current_localisation"
@@ -41,7 +41,7 @@ ok, err = pcall ->
     
     WDM.writeTempData WDM.readAll(os.getSystemDir("lang")..loc..".xml"), "localisation"
     
-    print "Loading User Interface..."
+    print "Loading User Interface...\n"
     sleep 0.01
     
     if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
@@ -52,6 +52,24 @@ ok, err = pcall ->
     
     -- Registering network address
     WDM.writeTempData "000.".."00"..os.getComputerID!, "address"
+    
+    -- Loading Server modules
+    print "\nLoading Server modules..."
+    sleep 0.01
+    
+    loadModule = (path) ->
+        name = fs.getName path
+        return ->
+            os.run {}, path
+    
+    modules = {}
+    for k, module in ipairs fs.list os.getSystemDir "server"
+        path = os.getSystemDir("server")..module
+        if not fs.isDir(path) and string.find module, ".lua"
+            moduleName = module\sub 1, (string.find(module, "%.") or #module + 1) - 1
+            modules[moduleName] = loadModule path
+            print "Server module loaded: "..moduleName
+    print!
     
     _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
@@ -69,9 +87,16 @@ ok, err = pcall ->
         os.removeProcess "CORE_NETWORK_THREAD"
     
     if os.addProcess("SYSTEM_THREAD", _SYSTEM_THREAD) and os.addProcess("CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD)
-        ok, err = os.startProcesses!
-        if not ok
-            error err
+        cont = true
+        for k, v in pairs modules
+            if not os.addProcess(string.upper(k).."_NETWORK_THREAD", v)
+                cont = false
+                break
+        
+        if cont
+            ok, err = os.startProcesses!
+            if not ok
+                error err
 
 -- Display error if OS errored
 term.setBackgroundColour 32768 -- Black
