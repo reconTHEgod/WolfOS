@@ -627,18 +627,17 @@ do
 	local processes = {}
 	local processCount = 0
 	local function createProcess(process)
-		if ftype("function", process) then
-			return coroutine.create(process)
-		end
+		return coroutine.create(process)
 	end
 	
 	function os.addProcess(key, process)
-		if ftype("string, function", key, process) then
-			table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
-			processCount = processCount + 1
-			return true
+		ok, err = ftype("string, function", key, process)
+		if not ok then
+			error(err, 2)
 		end
-		return false
+		
+		table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
+		processCount = processCount + 1
 	end
 	
 	function os.removeProcess(key)
