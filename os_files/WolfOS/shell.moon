@@ -16,14 +16,15 @@ ok, err = pcall ->
     
     crypt = require os.getSystemDir("apis").."crypt..lua"
     
+    peripheral = require "rom.apis.peripheral"
     textutils = require "rom.apis.textutils"
     
-    -- Checking integrity of system dirs
+    print "\nChecking integrity of System files...\n"
+    sleep 0.01
     for k, v in pairs os.getSystemDir!
         if not fs.isDir v
             fs.makeDir v
     
-    -- Checking integrity of data files
     if not WDM.exists os.getSystemDir("data").."client.dat"
         WDM.write os.getSystemDir("data").."client.dat", crypt.toBase64 textutils.serialize {}
     if not WDM.exists os.getSystemDir("data").."server.dat"
@@ -31,9 +32,8 @@ ok, err = pcall ->
     if not WDM.exists os.getSystemDir("data").."users.dat"
         WDM.write os.getSystemDir("data").."users.dat", crypt.toBase64 textutils.serialize {}
     
-    print "\nLoading Language Localisation...\n"
+    print "Loading Language Localisation...\n"
     sleep 0.01
-    
     loc = WDM.readClientData "current_localisation"
     if not loc
         loc = "en_UK"
@@ -41,62 +41,72 @@ ok, err = pcall ->
     
     WDM.writeTempData WDM.readAll(os.getSystemDir("lang")..loc..".xml"), "localisation"
     
-    print "Loading User Interface...\n"
-    sleep 0.01
-    
-    if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
-        error WUI.getLocalisedString "error.shell.screen_dims"
-    
-    if not term.isColour!
-        error WUI.getLocalisedString "error.shell.screen_colour"
-    
-    -- Registering network address
-    WDM.writeTempData "000.".."00"..os.getComputerID!, "address"
-    
-    -- Loading Server modules
-    print "\nLoading Server modules..."
-    sleep 0.01
-    
-    loadModule = (path) ->
-        name = fs.getName path
-        return ->
-            os.run {}, path
+    modemPort = WDM.readServerData("modem_port") or ""
+    if not peripheral.getType(modemPort) == "modem"
+        WDM.writeServerData "", "modem_port"
+        WDM.writeServerData false, "online"
     
     modules = {}
-    for k, module in ipairs fs.list os.getSystemDir "server"
-        path = os.getSystemDir("server")..module
-        if not fs.isDir(path) and string.find module, ".lua"
-            moduleName = module\sub 1, (string.find(module, "%.") or #module + 1) - 1
-            modules[moduleName] = loadModule path
-            print "Server module loaded: "..moduleName
-    print!
+    online = WDM.readServerData "online"
+    if online
+        print "Loading Server modules..."
+        sleep 0.01
+        loadModule = (path) ->
+            name = fs.getName path
+            return ->
+                os.run {}, path
+        
+        for k, module in ipairs fs.list os.getSystemDir "server"
+            path = os.getSystemDir("server")..module
+            if not fs.isDir(path) and string.find module, ".lua"
+                moduleName = module\sub 1, (string.find(module, "%.") or #module + 1) - 1
+                modules[moduleName] = loadModule path
+                print "Server module loaded: "..string.upper moduleName
+        
+        print "\nAttempting to connect to network..."
+        sleep 0.01
+        
+        channel = WDM.readServerData("network_channel") or 0
+        WNC.broadcast modemPort, channel, {"HYPERPAW_parent_request"}
+        
+        data = WNC.listen modemPort, channel, 5
+        
+        if data and data[1] == "HYPERPAW_parent_proposal"
+            WDM.writeTempData data.senderAddress, "parent_address"
+            WNC.send modemPort, data.senderAddress, os.getComputerID!..":"..channel, data.senderAddress, {"HYPERPAW_child_registry"}
+            
+            print "Connection established\n"
+        else
+            print "Connection timed out\n"
+    
+    print "Loading User Interface...\n"
+    sleep 0.01
+    if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
+        error WUI.getLocalisedString("error.shell.screen_dims"), 0
+    
+    if not term.isColour!
+        error WUI.getLocalisedString("error.shell.screen_colour"), 0
     
     _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
     
     _CORE_NETWORK_THREAD = ->
-        while true
-            if WDM.readClientData "online"
-                data = WNC.listen(WDM.readClientData("modem_port"), 0, 2) or {}
-                
-                switch data[1]
-                    when "test_connection"
-                        WNC.send WDM.readClientData("modem_port"), data.senderAddress, "connection_response"
-            else
-                break
-        os.removeProcess "CORE_NETWORK_THREAD"
+        while WDM.readClientData "online"
+            data = WNC.listen(WDM.readServerData("modem_port"), WDM.readServerData("network_channel"), 2) or {}
+            
+            switch data[1]
+                when "test_connection"
+                    WNC.send WDM.readServerData("modem_port"), data.senderAddress, "connection_response"
     
-    if os.addProcess("SYSTEM_THREAD", _SYSTEM_THREAD) and os.addProcess("CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD)
-        cont = true
-        for k, v in pairs modules
-            if not os.addProcess(string.upper(k).."_NETWORK_THREAD", v)
-                cont = false
-                break
-        
-        if cont
-            ok, err = os.startProcesses!
-            if not ok
-                error err
+    os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
+    os.addProcess "CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD
+    
+    for k, v in pairs modules
+        os.addProcess string.upper(k).."_NETWORK_THREAD", v
+    
+    ok, err = os.startProcesses!
+    if not ok
+        error err
 
 -- Display error if OS errored
 term.setBackgroundColour 32768 -- Black
@@ -148,6 +158,7 @@ list = (data, sort = true) ->
 commands = {
     exit: -> running = false
     version: -> print "WolfOS "..os.getVersion!
+    info: -> print "Copyright 2013 James Chapman (toxic.wolf666@gmail.com)"
     clear: -> clear!
     apis: ->
         apis = {}
@@ -326,7 +337,7 @@ pcall ->
         
         write: (type, key, value) ->
             if currentUser and currentUser.type == "admin"
-                if ftype "string, string, string", type, key, value
+                if ftype "string, string, ?string", type, key, value
                     if value == "true" then value = true
                     elseif value == "false" then value = false
                     
@@ -338,9 +349,9 @@ pcall ->
                         when "server"
                             WDM.writeServerData value, key
                         else
-                            printError "Usage: data write <temp|client|server> <key> <value>"
+                            printError "Usage: data write <temp|client|server> <key> [value]"
                 else
-                    printError "Usage: data write <temp|client|server> <key> <value>"
+                    printError "Usage: data write <temp|client|server> <key> [value]"
             else
                 printError "You do not have permission to perform this action!"
     }
@@ -349,11 +360,13 @@ pcall ->
 pcall ->
     WNC = require os.getSystemDir("apis").."WNC..lua"
     commands.network = {
-        send: (modemPort, address, ...) ->
-            if ftype "string, string", modemPort, address
-                return WNC.send modemPort, address, ...
+        send: (modemPort, receiverAddress, destinationAddress, ...) ->
+            if ftype "string, string, string", modemPort, receiverAddress, destinationAddress
+                channel = receiverAddress\match "(%d+)$"
+                sourceAddress = os.getComputerID!..":"..channel
+                return WNC.send modemPort, receiverAddress, sourceAddress, destinationAddress, {...}
             else
-                printError "Usage: network send <modem port> <address> [...]"
+                printError "Usage: network send <modem port> <receiver> <destination> [...]"
         
         listen: (modemPort, channel, timeout) ->
             channel, timeout = tonumber(channel), tonumber(timeout)
@@ -363,6 +376,7 @@ pcall ->
                 if data
                     display = {
                         "Sender: "..data.senderAddress
+                        "Source: "..data.sourceAddress
                         "Distance: "..data.distance
                     }
                     
