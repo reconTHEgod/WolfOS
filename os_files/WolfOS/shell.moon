@@ -112,7 +112,7 @@ ok, err = pcall ->
                 when "test_connection"
                     WNC.send modemPort, relay, thisAddress, data.sourceAddress, {"connection_response"}
     
-    --os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
+    os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
     os.addProcess "CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD
     
     for k, v in pairs modules
