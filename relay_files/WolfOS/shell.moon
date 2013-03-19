@@ -112,6 +112,8 @@ _COMMUNICATION_THREAD = ->
             
             sender = data.senderAddress
             senderID = tonumber sender\match "(%d+)"
+            source = data.sourceAddress
+            sourceID = tonumber source\match "(%d+)"
             dest = data.destinationAddress
             destID = nil
             if dest then destID = tonumber dest\match "(%d+)"
@@ -141,7 +143,7 @@ _COMMUNICATION_THREAD = ->
                     if sender != data.sourceAddress
                         WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "impersonation_attempt"}
                 
-                if parents[destID] != nil
+                if parents[destID] != nil and parents[sourceID] != nil
                     if parents[destID] == computerID
                         sendTo = dest
                     --else
@@ -156,7 +158,7 @@ _COMMUNICATION_THREAD = ->
                     
                     WNC.send modemPort, sendTo, data.sourceAddress, dest, packets
                 else
-                    WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "unknown_child"}
+                    WNC.send modemPort, sender, thisAddress, source, {"HYPERPAW_relay_error", "unknown_child"}
             
             if update
                 --map.calculate!
