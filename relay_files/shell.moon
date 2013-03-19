@@ -11,7 +11,6 @@ import clear, print, printError, read, write from debug
 if not os.getComputerLabel!
     os.setComputerLabel "ID #"..os.getComputerID!
 
-
 -- Initialise data storage
 computerID = os.getComputerID!
 update = false
@@ -35,18 +34,20 @@ data_.read = ->
 -- Network Map functions
 map = {}
 map.add_relay = (id) ->
-    relays[id] = {id: id, dist: -1, pre: -1}
+    relays[id] = {id: id}
     links[id] = {}
 map.add_link = (id1, id2) ->
     if relays[id1] == nil then map.add_relay id1
     if relays[id2] == nil then map.add_relay id2
     
-    n1 = math.min id1, id2
-    n2 = math.max id1, id2
-    if links[n1][n2] == nil
-        links[n1][n2] = true
-        return true
-    return false
+    _update = false
+    if links[id1][id2] == nil
+        links[id1][id2] = true
+        _update = true
+    if links[id2][id1] == nil
+        links[id2][id1] = true
+        _update = true
+    return _update
 map.get = ->
     return {links: links, parents: parents}
 map.distribute = ->
@@ -69,45 +70,11 @@ map.process_update = (network_map) ->
             _update = true
     
     return _update
--- Dijksta's algorithm
-map.calculate = ->
-    Q, Qsize, i, relay, minDist, minIndex, id, u, v, alt = {}, 0
-    for i, relay in pairs relays
-        table.insert Q, relay.id
-        Qsize += 1
-        relay.pre = -1
-        relay.dist = -1
+--map.calculate = ->
     
-    relays[computerID].dist = 0
-    
-    while Qsize > 0
-        minDist = -1
-        minIndex = -1
-        for i, id in pairs Q
-            if relays[id].dist >= 0 and (relays[id].dist < minDist or minDist == -1)
-                midDist = relays[id].dist
-                u = id
-                minIndex = i
-        
-        if minDist == -1
-            return false
-        
-        table.remove Q, minIndex
-        Qsize -= 1
-        
-        for i, v in pairs Q
-            if links[math.min(u, v)][math.max(u, v)]
-                alt = relays[u].dist + 1
-                if alt < relays[v].dist or relays[v].dist == -1
-                    relays[v].dist = alt
-                    relays[v].pre = u
 
-get_nexthop_to = (relay) ->
-    next = nil
-    while relays[relay].pre != -1
-        next = relay
-        relay = relays[relay].pre
-    return next
+--get_nexthop_to = (relay) ->
+    
 
 _INIT_THREAD = ->
     _path = ""
@@ -169,25 +136,25 @@ _COMMUNICATION_THREAD = ->
                 elseif data[1] == "HYPERPAW_network_map_request"
                     WNC.send modemPort, sender, thisAddress, data.sourceAddress, {"HYPERPAW_network_map_update", map.get!}
             else
-                sendTo = -1
+                sendTo = nil
                 if parents[senderID] != nil
                     if sender != data.sourceAddress
                         WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "impersonation_attempt"}
                 
                 if parents[destID] != nil
                     if parents[destID] == computerID
-                        sendTo = destID
-                    else
-                        sendTo = get_next_hop_to parents[destID]
-                elseif relays[destID] != nil
-                    sendTo = get_next_hop_to destID
+                        sendTo = dest
+                    --else
+                    --    sendTo = get_next_hop_to parents[destID]
+                --elseif relays[destID] != nil
+                --    sendTo = get_next_hop_to destID
                 
-                if sendTo > -1
-                    packets = {}
+                if sendTo != nil
+                    packets = {totalDistance: data.totalDistance}
                     for k, v in ipairs data
                         table.insert packets, v
                     
-                    WNC.send modemPort, tostring(sendTo)..":"..channel, data.sourceAddress, dest, packets
+                    WNC.send modemPort, sendTo, data.sourceAddress, dest, packets
                 else
                     error "Unable to relay from "..sender
             
@@ -258,7 +225,7 @@ _SYSTEM_THREAD = ->
                 printError "Already hosting network relay point!"
         close: ->
             if systemData.connected
-                modem = peripheral.wrap networkData.modem_port
+                modem = peripheral.wrap systemData.modem_port
                 modem.closeAll!
                 os.removeProcess "COMMUNICATION_THREAD"
                 print "Disconnected from network."
