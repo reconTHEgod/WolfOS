@@ -100,14 +100,19 @@ ok, err = pcall ->
         os.run {}, os.getSystemDir("client").."startup.lua"
     
     _CORE_NETWORK_THREAD = ->
-        while WDM.readClientData "online"
-            data = WNC.listen(WDM.readServerData("modem_port"), WDM.readServerData("network_channel"), 2) or {}
+        modemPort = WDM.readServerData "modem_port"
+        channel = WDM.readServerData "network_channel"
+        relay = WDM.readTempData "parent_address"
+        thisAddress = os.getComputerID!..":"..channel
+        
+        while WDM.readServerData "online"
+            data = WNC.listen(modemPort, channel) or {}
             
             switch data[1]
                 when "test_connection"
-                    WNC.send WDM.readServerData("modem_port"), data.senderAddress, "connection_response"
+                    WNC.send modemPort, relay, thisAddress, data.sourceAddress, {"connection_response"}
     
-    os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
+    --os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
     os.addProcess "CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD
     
     for k, v in pairs modules

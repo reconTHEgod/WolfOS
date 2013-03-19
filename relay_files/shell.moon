@@ -156,7 +156,7 @@ _COMMUNICATION_THREAD = ->
                     
                     WNC.send modemPort, sendTo, data.sourceAddress, dest, packets
                 else
-                    error "Unable to relay from "..sender
+                    WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "unknown_child"}
             
             if update
                 --map.calculate!
