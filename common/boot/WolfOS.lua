@@ -638,6 +638,8 @@ do
 		
 		table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
 		processCount = processCount + 1
+		
+		os.queueEvent("added_process")
 	end
 	
 	function os.removeProcess(key)
