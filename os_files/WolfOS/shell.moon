@@ -87,6 +87,15 @@ ok, err = pcall ->
     if not term.isColour!
         error WUI.getLocalisedString("error.shell.screen_colour"), 0
     
+    print "Loading Theme...\n"
+    sleep 0.01
+    theme = WDM.readClientData "current_theme"
+    if not theme
+        theme = "default"
+        WDM.writeClientData theme, "current_theme"
+    
+    WDM.writeTempData WDM.readAll(os.getSystemDir("themes")..theme..".xml"), "theme"
+    
     _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
     
