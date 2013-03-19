@@ -9,8 +9,8 @@ end
 
 -- WolfOS directory mappings
 local _root = "/WolfOS/"
-local _apis, _client, _server, _data, _lang, _apps = _root.."apis/", _root.."client/", _root.."server/", _root.."data/", _root.."lang/", _root.."applications/"
-local _controlPanel, _users = _client.."controlPanel/", _data.."users/"
+local _apis, _client, _server, _data, _lang = _root.."apis/", _root.."client/", _root.."server/", _root.."data/", _root.."lang/"
+local _apps, _controlPanel, _themes, _users = _client.."applications/", _client.."controlPanel/", _client.."themes/", _data.."users/"
 local _WOLFOS_DIRS = {
 	root = _root,
 	apis = _apis,
@@ -20,6 +20,7 @@ local _WOLFOS_DIRS = {
 	lang = _lang,
 	applications = _apps,
 	controlPanel = _controlPanel,
+	themes = _themes,
 	users = _users,
 }
 
