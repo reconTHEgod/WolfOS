@@ -95,13 +95,13 @@ export listen = (modemPort, channel, timeout) ->
     if not ok
         error modem, 2
     
-    if not modem.isOpen channel
-        modem.open channel
-    
     timer = if timeout
         os.startTimer timeout
     
     while true
+        if not modem.isOpen channel
+            modem.open channel
+        
         _event, _modemPort, _channel, _replyChannel, _data, _distance = os.pullEvent!
         
         if _event == "modem_message"
