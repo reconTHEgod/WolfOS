@@ -34,7 +34,7 @@ data_.read = ->
 -- Network Map functions
 map = {}
 map.add_relay = (id) ->
-    relays[id] = {id: id}
+    relays[id] = {id: id, dist: -1, prev: -1}
     links[id] = {}
 map.add_link = (id1, id2) ->
     if relays[id1] == nil then map.add_relay id1
@@ -70,11 +70,48 @@ map.process_update = (network_map) ->
             _update = true
     
     return _update
---map.calculate = ->
+map.calculate = -> -- Uses Dijksta's Algorithm to calculate optimum distances between relays
+    Q, u, v, alt = {}
     
-
---get_nexthop_to = (relay) ->
+    for i, relay in pairs relays
+        relay.dist = -1
+        relay.prev = -1
+        
+        table.insert Q, relay.id
     
+    relays[computerID].dist = 0
+    
+    while #Q > 0
+        minDist = -1
+        minIndex = -1
+        
+        -- u = relay in Q with smallest distance - will be this relay in first case
+        for i, id in pairs Q
+            if relays[id].dist >= 0 and (relays[id].dist < minDist or minDist == -1)
+                midDist = relays[id].dist
+                u = id
+                minIndex = i
+        
+        if minDist == -1 -- All remaining relays are inaccessible from this relay
+            return false
+        
+        table.remove Q, minIndex
+        
+        -- for each neighbor 'v' of u, where v has not yet been removed from Q
+        for i, v in pairs Q
+            if links[u][v]
+                alt = relays[u].dist + 1
+                if alt < relays[v].dist or relays[v].dist == -1
+                    relays[v].dist = alt
+                    relays[v].prev = u
+map.getNextNode = (relay) ->
+    next = nil
+    
+    while relays[relay].prev != -1
+        next = relay
+        relay = relays[relay].prev
+    
+    return next.id
 
 _INIT_THREAD = ->
     _path = ""
@@ -146,10 +183,10 @@ _COMMUNICATION_THREAD = ->
                 if parents[destID] != nil and parents[sourceID] != nil
                     if parents[destID] == computerID
                         sendTo = dest
-                    --else
-                    --    sendTo = get_next_hop_to parents[destID]
-                --elseif relays[destID] != nil
-                --    sendTo = get_next_hop_to destID
+                    else
+                        sendTo = map.getNextNode parents[destID]
+                elseif relays[destID] != nil
+                    sendTo = map.getNextNode destID
                 
                 if sendTo != nil
                     packets = {totalDistance: data.totalDistance}
@@ -161,7 +198,7 @@ _COMMUNICATION_THREAD = ->
                     WNC.send modemPort, sender, thisAddress, source, {"HYPERPAW_relay_error", "unknown_child"}
             
             if update
-                --map.calculate!
+                map.calculate!
                 map.distribute!
                 update = false
 
@@ -187,7 +224,7 @@ _SYSTEM_THREAD = ->
             w, h = term.getSize!
             if y == h
                 term.write "Press any key to continue..."
-                --os.pullEvent "key"
+                os.pullEvent "key"
                 term.clearLine!
                 term.setCursorPos 1, y
     
