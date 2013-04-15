@@ -1,4 +1,4 @@
-local version = "Silverfish Bootloader 0.1"
+local version = "Silverfish Bootloader 0.2"
 
 local bootPaths = {
 "rom/boot",
@@ -31,13 +31,23 @@ if not fs.exists(dataPath) then
 end
 
 local function clear()
-    term.clear()
+    term.setTextColour(1) -- white
+	term.setBackgroundColour(32768) -- black
+	term.clear()
     term.setCursorPos(1, 1)
 end
 
 local function write(s, y)
     term.setCursorPos(1, y)
     term.write(s)
+end
+
+local function writeCenter(s, y)
+	w = term.getSize()
+	x = (w / 2) - (#s / 2) + 1
+	
+	term.setCursorPos(x, y)
+	term.write(s)
 end
 
 local function boot(path)
@@ -96,13 +106,21 @@ else
 	
     local function redraw()
         clear()
-        write(version, 1)
+		
+		term.setTextColour(32768) -- black
+		term.setBackgroundColour(1) -- white
+        writeCenter(" -- "..version.." -- ", 1)
+		
         for i = 1, math.min(#bootList, h - 1) do
             if i + scroll == selected then
-                write(">"..bootList[i + scroll], i + 2)
+                term.setTextColour(32768) -- black
+				term.setBackgroundColour(1) -- white
             else
-                write(" "..bootList[i + scroll], i + 2)
+                term.setTextColour(1) -- white
+				term.setBackgroundColour(32768) -- black
             end
+			local s = bootList[i + scroll]
+			writeCenter(" "..string.gmatch(fs.getName(s), "(%w+)")().." ("..s..") ", i + 2)
         end
     end
     while loop do
