@@ -664,7 +664,7 @@ do
 			for i = 1, processCount do
 				v = processes[i]
 				if v then
-					if filters[v.thread] == nil or filters[v.thread] == "terminate" then
+					if filters[v.thread] == nil or filters[v.thread] == eventData[1] or filters[v.thread] == "terminate" then
 						ok, param = coroutine.resume(v.thread, unpack(eventData))
 						if not ok then
 							return false, "Process: "..v.key..": "..param
