@@ -12,6 +12,8 @@ if not os.getComputerLabel!
     os.setComputerLabel "ID #"..os.getComputerID!
 
 -- Initialise data storage
+messageQueue = {}
+
 computerID = os.getComputerID!
 update = false
 
@@ -128,12 +130,22 @@ _INIT_THREAD = ->
     if not peripheral.getType(modemPort) == "modem"
         systemData.connected = false
         data_.write!
-        
+
+_LISTENER_THREAD = ->
+    while true
+        data = WNC.listen modemPort, channel
+        table.insert messageQueue, data
 
 _COMMUNICATION_THREAD = ->
     if systemData.connected
         modemPort = systemData.modem_port
         channel = systemData.network_channel
+        
+        env = getfenv _LISTENER_THREAD
+        env.modemPort = modemPort
+        env.channel = channel
+        setfenv _LISTENER_THREAD, env
+        os.addProcess "LISTENER_THREAD", _LISTENER_THREAD
         
         map.add_relay computerID
         modem = peripheral.wrap modemPort
@@ -142,65 +154,71 @@ _COMMUNICATION_THREAD = ->
         
         thisAddress = computerID..":"..channel
         while true
-            data = WNC.listen modemPort, channel
+            data = nil
             
-            if data.senderAddress == nil or data.sourceAddress == nil
-                error "Attempt to process illegal packet", 0
+            if #messageQueue > 0
+                data = table.remove messageQueue, 1
             
-            sender = data.senderAddress
-            senderID = tonumber sender\match "(%d+)"
-            source = data.sourceAddress
-            sourceID = tonumber source\match "(%d+)"
-            dest = data.destinationAddress
-            destID = nil
-            if dest then destID = tonumber dest\match "(%d+)"
-            
-            if data.destinationAddress == nil
-                if data[1] == "HYPERPAW_parent_request"
-                    WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_parent_proposal"}
-                elseif data[1] == "HYPERPAW_relay_discovery"
-                    if relays[senderID] == nil
-                        map.add_relay senderID
-                    
-                    update = map.add_link computerID, senderID
-                    if not update
-                        WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_network_map_update", map.get!}
-            elseif data.destinationAddress == thisAddress
-                if data[1] == "HYPERPAW_network_map_update"
-                    update = map.process_update data[2]
-                elseif data[1] == "HYPERPAW_child_registry"
-                    if parents[senderID] == nil or parents[senderID] != computerID
-                        parents[senderID] = computerID
-                        update = true
-                elseif data[1] == "HYPERPAW_network_map_request"
-                    WNC.send modemPort, sender, thisAddress, data.sourceAddress, {"HYPERPAW_network_map_update", map.get!}
-            else
-                sendTo = nil
-                if parents[senderID] != nil
-                    if sender != data.sourceAddress
-                        WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "impersonation_attempt"}
+            if data
+                if data.senderAddress == nil or data.sourceAddress == nil
+                    error "Attempt to process illegal packet", 0
                 
-                if parents[destID] != nil and parents[sourceID] != nil
-                    if parents[destID] == computerID
-                        sendTo = dest
-                    else
-                        sendTo = map.getNextNode parents[destID]
-                elseif relays[destID] != nil
-                    sendTo = map.getNextNode destID
+                sender = data.senderAddress
+                senderID = tonumber sender\match "(%d+)"
+                source = data.sourceAddress
+                sourceID = tonumber source\match "(%d+)"
+                dest = data.destinationAddress
+                destID = nil
+                if dest then destID = tonumber dest\match "(%d+)"
                 
-                if sendTo != nil
-                    packets = {totalDistance: data.totalDistance}
-                    for k, v in ipairs data
-                        table.insert packets, v
-                    
-                    WNC.send modemPort, sendTo, data.sourceAddress, dest, packets
+                if data.destinationAddress == nil
+                    if data[1] == "HYPERPAW_parent_request"
+                        WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_parent_proposal"}
+                    elseif data[1] == "HYPERPAW_relay_discovery"
+                        if relays[senderID] == nil
+                            map.add_relay senderID
+                        
+                        update = map.add_link computerID, senderID
+                        if not update
+                            WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_network_map_update", map.get!}
+                elseif data.destinationAddress == thisAddress
+                    if data[1] == "HYPERPAW_network_map_update"
+                        update = map.process_update data[2]
+                    elseif data[1] == "HYPERPAW_child_registry"
+                        if parents[senderID] == nil or parents[senderID] != computerID
+                            parents[senderID] = computerID
+                            update = true
+                    elseif data[1] == "HYPERPAW_network_map_request"
+                        WNC.send modemPort, sender, thisAddress, data.sourceAddress, {"HYPERPAW_network_map_update", map.get!}
                 else
-                    WNC.send modemPort, sender, thisAddress, source, {"HYPERPAW_relay_error", "unknown_child"}
-            
-            if update
-                map.calculate!
-                map.distribute!
-                update = false
+                    sendTo = nil
+                    if parents[senderID] != nil
+                        if sender != data.sourceAddress
+                            WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "impersonation_attempt"}
+                    
+                    if parents[destID] != nil and parents[sourceID] != nil
+                        if parents[destID] == computerID
+                            sendTo = dest
+                        else
+                            sendTo = map.getNextNode parents[destID]
+                    elseif relays[destID] != nil
+                        sendTo = map.getNextNode destID
+                    
+                    if sendTo != nil
+                        packets = {totalDistance: data.totalDistance}
+                        for k, v in ipairs data
+                            table.insert packets, v
+                        
+                        WNC.send modemPort, sendTo, data.sourceAddress, dest, packets
+                    else
+                        WNC.send modemPort, sender, thisAddress, source, {"HYPERPAW_relay_error", "unknown_child"}
+                
+                if update
+                    map.calculate!
+                    map.distribute!
+                    update = false
+            else
+                sleep 0.01
 
 _SYSTEM_THREAD = ->
     print "HyperPaw Network Relay\nType 'help' to view a list of available commands.\n"

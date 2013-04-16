@@ -66,14 +66,18 @@ ok, err = pcall ->
         print "\nAttempting to connect to network..."
         sleep 0.01
         
-        channel = WDM.readServerData("network_channel") or 0
+        channel = WDM.readServerData("network_channel") or 7000
+        thisAddress = os.getComputerID!..":"..channel
+        
         WNC.broadcast modemPort, channel, {"HYPERPAW_parent_request"}
         
-        data = WNC.listen modemPort, channel, 5
+        data = {}
+        while data.receiverAddress != thisAddress
+            data = WNC.listen modemPort, channel, 5
         
         if data and data[1] == "HYPERPAW_parent_proposal"
             WDM.writeTempData data.senderAddress, "parent_address"
-            WNC.send modemPort, data.senderAddress, os.getComputerID!..":"..channel, data.senderAddress, {"HYPERPAW_child_registry"}
+            WNC.send modemPort, data.senderAddress, thisAddress, data.senderAddress, {"HYPERPAW_child_registry"}
             
             print "Connection established\n"
         else
@@ -105,7 +109,7 @@ ok, err = pcall ->
         relay = WDM.readTempData "parent_address"
         thisAddress = os.getComputerID!..":"..channel
         
-        while WDM.readServerData "online"
+        while true
             data = WNC.listen(modemPort, channel) or {}
             
             switch data[1]
