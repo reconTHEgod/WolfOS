@@ -119,8 +119,6 @@ ok, err = pcall ->
     
     loadThemeFile = (path) ->
         name = path\gmatch("([%a%s]+)%.xml")!
-        debug.printToMonitor "right", name
-        
         themes[name] = {}
         file = WDM.readAll path
         
