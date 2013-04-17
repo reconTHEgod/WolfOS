@@ -23,7 +23,7 @@ checkModem = (modemPort) ->
         return false, "Invalid modem port"
 
 export send = (modemPort, receiverAddress, sourceAddress, destinationAddress, packets) ->
-    ok, err = ftype "string, string, string, table", modemPort, receiverAddress, destinationAddress, packets
+    ok, err = ftype "string, string, string, string, table", modemPort, receiverAddress, sourceAddress, destinationAddress, packets
     if not ok
         error err, 2
     
