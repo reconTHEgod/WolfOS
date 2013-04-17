@@ -7,7 +7,7 @@ ok, err = pcall ->
     if not os.getComputerLabel!
         os.setComputerLabel "ID #"..os.getComputerID!
     
-    print "Initialising WolfOS "..os.getVersion!.."...\n"
+    print "WolfOS "..os.getVersion!.."...\n"
     sleep 0.01
     
     WDM = require os.getSystemDir("apis").."WDM..lua"
@@ -19,7 +19,7 @@ ok, err = pcall ->
     peripheral = require "rom.apis.peripheral"
     textutils = require "rom.apis.textutils"
     
-    print "\nChecking integrity of System files...\n"
+    print "Checking integrity of System files..."
     sleep 0.01
     for k, v in pairs os.getSystemDir!
         if not fs.isDir v
@@ -31,15 +31,32 @@ ok, err = pcall ->
         WDM.write os.getSystemDir("data").."server.dat", crypt.toBase64 textutils.serialize {}
     if not WDM.exists os.getSystemDir("data").."users.dat"
         WDM.write os.getSystemDir("data").."users.dat", crypt.toBase64 textutils.serialize {}
+    print "Done.\n"
     
-    print "Loading Language Localisation...\n"
+    print "Loading Language Localisation..."
     sleep 0.01
-    loc = WDM.readClientData "current_localisation"
-    if not loc
-        loc = "en_UK"
-        WDM.writeClientData loc, "current_localisation"
+    currentLocale = WDM.readClientData "current_locale"
+    if not currentLocale
+        currentLocale = "en_UK"
+        WDM.writeClientData currentLocale, "current_locale"
     
-    WDM.writeTempData WDM.readAll(os.getSystemDir("lang")..loc..".xml"), "localisation"
+    localisation = {}
+    
+    loadLocalisationFile = (path) ->
+        locale = path\gmatch("(%l+_%u+)%.xml")!
+        localisation[locale] = {}
+        file = WDM.readAll path
+        
+        for k, v in file\gmatch "<entry key=\"(.-)\">(.-)</entry>"
+            localisation[locale][k] = v
+        
+        print "Locale loaded: "..locale
+    
+    for i, path in ipairs fs.list os.getSystemDir "lang"
+        if not fs.isDir(path) and string.find(path, ".xml")
+            loadLocalisationFile os.getSystemDir("lang")..path
+    
+    WDM.writeTempData localisation, "localisation"
     
     modemPort = WDM.readServerData("modem_port") or ""
     if not peripheral.getType(modemPort) == "modem"
@@ -49,7 +66,7 @@ ok, err = pcall ->
     modules = {}
     online = WDM.readServerData "online"
     if online
-        print "Loading Server modules..."
+        print "\nLoading Server modules..."
         sleep 0.01
         loadModule = (path) ->
             name = fs.getName path
@@ -79,26 +96,44 @@ ok, err = pcall ->
             WDM.writeTempData data.senderAddress, "parent_address"
             WNC.send modemPort, data.senderAddress, thisAddress, data.senderAddress, {"HYPERPAW_child_registry"}
             
-            print "Connection established\n"
+            print "Connection established."
         else
-            print "Connection timed out\n"
+            print "Connection timed out."
     
-    print "Loading User Interface...\n"
+    print "\nLoading User Interface..."
     sleep 0.01
     if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
         error WUI.getLocalisedString("error.shell.screen_dims"), 0
-    
     if not term.isColour!
         error WUI.getLocalisedString("error.shell.screen_colour"), 0
+    print "Done.\n"
     
-    print "Loading Theme...\n"
+    print "Loading Themes..."
     sleep 0.01
     theme = WDM.readClientData "current_theme"
     if not theme
-        theme = "default"
+        theme = "Default"
         WDM.writeClientData theme, "current_theme"
     
-    WDM.writeTempData WDM.readAll(os.getSystemDir("themes")..theme..".xml"), "theme"
+    themes = {}
+    
+    loadThemeFile = (path) ->
+        name = path\gmatch("([%a%s]+)%.xml")!
+        debug.printToMonitor "right", name
+        
+        themes[name] = {}
+        file = WDM.readAll path
+        
+        for k, v in file\gmatch "<entry key=\"(.-)\">(.-)</entry>"
+            themes[name][k] = v
+        
+        print "Theme loaded: "..name
+    
+    for i, path in ipairs fs.list os.getSystemDir "themes"
+        if not fs.isDir(path) and string.find(path, ".xml")
+            loadThemeFile os.getSystemDir("themes")..path
+    
+    WDM.writeTempData themes, "themes"
     
     _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
