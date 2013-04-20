@@ -7,13 +7,13 @@ crypt = require os.getSystemDir("apis").."crypt..lua"
 _VALID_PORTS = {top: true, bottom: true, front: true, back: true, left: true, right: true}
 
 parseAddress = (address) ->
-    address = {string.match address, "(%d+)(:)(%d+)"}
+    address = {string.match address, "(%d+):(%d+)"}
     
-    if not (65535 >= tonumber address[3])
+    if #address != 2 or not (tonumber(address[2]) <= 65535)
         error "Invalid network address", 3
     return address
 
-checkModem = (modemPort) ->
+export checkModemPort = (modemPort) ->
     if _VALID_PORTS[modemPort]
         if peripheral.getType(modemPort) == "modem"
             return true, peripheral.wrap modemPort
@@ -37,7 +37,7 @@ export send = (modemPort, receiverAddress, sourceAddress, destinationAddress, pa
     if not _address
         error "Invalid network channel", 2
     
-    channel = tonumber address[3]
+    channel = tonumber address[2]
     data = {
         senderAddress: os.getComputerID!..":"..channel
         receiverAddress: receiverAddress
@@ -48,7 +48,7 @@ export send = (modemPort, receiverAddress, sourceAddress, destinationAddress, pa
     for k, v in ipairs packets
         table.insert data, v
     
-    ok, modem = checkModem modemPort
+    ok, modem = checkModemPort modemPort
     if not ok
         error modem, 2
     
@@ -74,7 +74,7 @@ export broadcast = (modemPort, channel, packets) ->
     for k, v in ipairs packets
         table.insert data, v
     
-    ok, modem = checkModem modemPort
+    ok, modem = checkModemPort modemPort
     if not ok
         error modem, 2
     
@@ -91,7 +91,7 @@ export listen = (modemPort, channel, timeout) ->
     if channel > 65535
         error "Invalid network channel", 2
     
-    ok, modem = checkModem modemPort
+    ok, modem = checkModemPort modemPort
     if not ok
         error modem, 2
     

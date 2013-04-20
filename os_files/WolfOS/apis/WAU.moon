@@ -1,9 +1,27 @@
 -- WolfOS Account Utilities
 
 WDM = require os.getSystemDir("apis").."WDM..lua"
+WNC = require os.getSystemDir("apis").."WNC..lua"
 
-getServerChannel = -> return WDM.readClientData("server_channel")
-getServerState = -> return WDM.readServerData("server_state")
+getModemPort = -> return WDM.readServerData "modem_port"
+getRelayAddress = -> return WDM.readTempData "parent_address"
+getServerState = -> return WDM.readServerData "server_state"
+getServerModuleChannel = ->
+    modules = WDM.readTempData("server_modules") or {}
+    if modules.user
+        return modules.user.channel
+
+getServerAddress = ->
+    channel = getServerModuleChannel!
+    address =  WDM.readServerData "server_address"
+    
+    if address and channel
+        return string.match(address, "(%d+):(%d+)")..":"..channel
+
+thisAddress = ->
+    channel = getServerModuleChannel!
+    if channel
+        return os.getComputerID!..":"..channel
 
 users = {}
 
@@ -21,9 +39,12 @@ generateUID = ->
     return uid
 
 export getUsers = ->
-    if getServerChannel! and not getServerState!
-        -- TODO: Send request to Server
-        sleep 1
+    if getServerAddress! and not getServerState!
+        WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_request", "user_list"}
+        data = WNC.listen getModemPort!, getServerModuleChannel!, 5
+        
+        if data and data[1] == "request_success"
+            users = data[2]
     else
         users = WDM.readData os.getSystemDir("data").."users.dat"
         
@@ -46,9 +67,8 @@ export createUser = (name, hash, type = "user") ->
     if not ok
         error err, 2
     
-    if getServerChannel! and not getServerState!
-        -- TODO: Send request to Server
-        sleep 1
+    if getServerAddress! and not getServerState!
+        WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "new_user", name, hash, type}
     else
         uid = generateUID!
         table.insert users, {uid: uid, name: name, hash: hash, type: type}
@@ -60,9 +80,8 @@ export removeUser = (_user) ->
     if not ok
         error err, 2
     
-    if getServerChannel! and not getServerState!
-        -- TODO: Send request to Server
-        sleep 1
+    if getServerAddress! and not getServerState!
+        WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "remove_user", _user}
     else
         user, i = exists _user
         if user
@@ -78,29 +97,33 @@ export changeUserData = (_user, k, v) ->
     if not ok
         error err, 2
     
-    if getServerChannel! and not getServerState!
-        -- TODO: Send request to Server
-        sleep 1
+    if getServerAddress! and not getServerState!
+        WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "update_user", _user, k, v}
     else
         user, i = exists _user
+        
         if user
             if k != "uid"
                 user[k] = v
                 users[i] = user
                 WDM.writeData os.getSystemDir("data").."users.dat", users
 
-export checkLogin = (name, _hash) ->
-    ok, err = ftype "string, string", name, _hash
-    if not ok
-        error err, 2
-    
-    if getServerChannel! and not getServerState!
-        -- TODO: Send request to Server
-        sleep 1
-    else
-        user = exists name
-        if user
-            if name == user.name and _hash == user.hash
+export checkLogin = (name, hash) ->
+    if ftype "string, string", name, hash
+        if getServerAddress! and not getServerState!
+            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"login_attempt", name, hash}
+            data = WNC.listen getModemPort!, getServerModuleChannel!, 5
+            
+            if data and data[1] == "login_success"
+                WDM.writeTempData false, "local_user"
+                
+                return true, data[2]
+        else
+            user = exists(name) or {}
+            
+            if name == user.name and hash == user.hash
                 WDM.writeTempData true, "local_user"
+                
                 return true, user
-        return false, "Invalid username or password!"
+    
+    return false, "Invalid username or password!"

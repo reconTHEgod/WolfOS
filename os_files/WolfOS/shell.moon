@@ -60,37 +60,28 @@ ok, err = pcall ->
     
     modemPort = WDM.readServerData("modem_port") or ""
     if not peripheral.getType(modemPort) == "modem"
+        modemPort = nil
         WDM.writeServerData "", "modem_port"
-        WDM.writeServerData false, "online"
     
     modules = {}
-    online = WDM.readServerData "online"
-    if online
-        print "\nLoading Server modules..."
-        sleep 0.01
-        loadModule = (path) ->
-            name = fs.getName path
-            return ->
-                os.run {}, path
-        
-        for k, module in ipairs fs.list os.getSystemDir "server"
-            path = os.getSystemDir("server")..module
-            if not fs.isDir(path) and string.find module, ".lua"
-                moduleName = module\sub 1, (string.find(module, "%.") or #module + 1) - 1
-                modules[moduleName] = loadModule path
-                print "Server module loaded: "..string.upper moduleName
-        
+    if modemPort
         print "\nAttempting to connect to network..."
         sleep 0.01
         
-        channel = WDM.readServerData("network_channel") or 7000
+        channel = WDM.readServerData "network_channel"
+        if not channel
+            channel = 7000
+            WDM.writeServerData 7000, "network_channel"
+        
         thisAddress = os.getComputerID!..":"..channel
         
         WNC.broadcast modemPort, channel, {"HYPERPAW_parent_request"}
         
         data = {}
         while data.receiverAddress != thisAddress
-            data = WNC.listen modemPort, channel, 5
+            data, err = WNC.listen modemPort, channel, 5
+            if not data and err == "timeout"
+                break
         
         if data and data[1] == "HYPERPAW_parent_proposal"
             WDM.writeTempData data.senderAddress, "parent_address"
@@ -99,16 +90,76 @@ ok, err = pcall ->
             print "Connection established."
         else
             print "Connection timed out."
+        
+        if WDM.readServerData "server_state"
+            print "\nLoading Server modules..."
+            sleep 0.01
+            
+            modules.core = {
+                channel: channel
+                thread: ->
+                    modemPort = WDM.readServerData "modem_port"
+                    channel = WDM.readServerData "network_channel"
+                    thisAddress = os.getComputerID!..":"..channel
+                    
+                    while true
+                        data = WNC.listen(modemPort, channel) or {}
+                        
+                        switch data[1]
+                            when "test_connection"
+                                WNC.send modemPort, data.senderAddress, thisAddress, data.sourceAddress, {"connection_response"}
+                            when "connection_request"
+                                -- TODO: Check whitelist here
+                                if true
+                                    _modules = WDM.readTempData "server_modules"
+                                    
+                                    for k, v in pairs _modules
+                                        _modules[k].thread = nil
+                                    
+                                    WNC.send modemPort, data.senderAddress, thisAddress, data.sourceAddress, {"connection_success", _modules}
+                                else
+                                    WNC.send modemPort, data.senderAddress, thisAddress, data.sourceAddress, {"connection_failure", "not_whitelisted"}
+            }
+            
+            print "Server module loaded: CORE"
+            
+            loadModule = (path) ->
+                name = fs.getName path
+                return ->
+                    os.run {}, path
+            
+            for k, module in ipairs fs.list os.getSystemDir "server"
+                path = os.getSystemDir("server")..module
+                if not fs.isDir(path) and string.find module, ".lua"
+                    moduleName = module\sub 1, (string.find(module, "%.") or #module + 1) - 1
+                    _modules = WDM.readServerData("server_modules")
+                    
+                    if _modules and type(_modules[moduleName]) == "number"
+                        modules[moduleName] = {channel: _modules[moduleName], thread: loadModule path}
+                    
+                    print "Server module loaded: "..string.upper moduleName
+            
+            WDM.writeTempData modules, "server_modules"
+        elseif WDM.readServerData "server_address"
+            print "\nAttempting to connect to server..."
+            sleep 0.01
+            
+            serverAddress = WDM.readServerData "server_address"
+            receiverAddress = WDM.readTempData "parent_address"
+            sourceAddress = os.getComputerID!..":"..channel
+            
+            WNC.send modemPort, receiverAddress, sourceAddress, serverAddress, {"connection_request"}
+            data, err = WNC.listen modemPort, channel, 5
+            
+            if data and data[1] == "connection_success"
+                WDM.writeTempData data[2], "server_modules"
+                WDM.writeServerData data.sourceAddress, "server_address"
+                
+                print "Connection established."
+            elseif not data and err == "timeout"
+                print "Connection timed out."
     
-    print "\nLoading User Interface..."
-    sleep 0.01
-    if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
-        error WUI.getLocalisedString("error.shell.screen_dims"), 0
-    if not term.isColour!
-        error WUI.getLocalisedString("error.shell.screen_colour"), 0
-    print "Done.\n"
-    
-    print "Loading Themes..."
+    print "\nLoading Themes..."
     sleep 0.01
     theme = WDM.readClientData "current_theme"
     if not theme
@@ -133,27 +184,21 @@ ok, err = pcall ->
     
     WDM.writeTempData themes, "themes"
     
+    print "\nLoading User Interface..."
+    sleep 0.01
+    if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
+        error WUI.getLocalisedString("error.shell.screen_dims"), 0
+    if not term.isColour!
+        error WUI.getLocalisedString("error.shell.screen_colour"), 0
+    print "Done.\n"
+    
     _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
     
-    _CORE_NETWORK_THREAD = ->
-        modemPort = WDM.readServerData "modem_port"
-        channel = WDM.readServerData "network_channel"
-        relay = WDM.readTempData "parent_address"
-        thisAddress = os.getComputerID!..":"..channel
-        
-        while true
-            data = WNC.listen(modemPort, channel) or {}
-            
-            switch data[1]
-                when "test_connection"
-                    WNC.send modemPort, relay, thisAddress, data.sourceAddress, {"connection_response"}
-    
     os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
-    os.addProcess "CORE_NETWORK_THREAD", _CORE_NETWORK_THREAD
     
     for k, v in pairs modules
-        os.addProcess string.upper(k).."_NETWORK_THREAD", v
+        os.addProcess string.upper(k).."_NETWORK_THREAD", v.thread
     
     ok, err = os.startProcesses!
     if not ok
@@ -388,9 +433,13 @@ pcall ->
         
         write: (type, key, value) ->
             if currentUser and currentUser.type == "admin"
-                if ftype "string, string, ?string", type, key, value
-                    if value == "true" then value = true
-                    elseif value == "false" then value = false
+                if ftype "string, string, string", type, key, value
+                    if value == "true"
+                        value = true
+                    elseif value == "false"
+                        value = false
+                    elseif value == "nil"
+                        value = nil
                     
                     switch type
                         when "temp"
@@ -400,19 +449,48 @@ pcall ->
                         when "server"
                             WDM.writeServerData value, key
                         else
-                            printError "Usage: data write <temp|client|server> <key> [value]"
+                            printError "Usage: data write <temp|client|server> <key> <value>"
                 else
-                    printError "Usage: data write <temp|client|server> <key> [value]"
+                    printError "Usage: data write <temp|client|server> <key> <value>"
             else
                 printError "You do not have permission to perform this action!"
     }
 
 -- HyperPaw Network command set
 pcall ->
+    WDM = require os.getSystemDir("apis").."WDM..lua"
     WNC = require os.getSystemDir("apis").."WNC..lua"
     commands.network = {
+        connect: (modemPort, channel) ->
+            channel = tonumber channel
+            ok = ftype("string, +number", modemPort, channel) and WNC.checkModemPort(modemPort)
+            
+            if ok
+                thisAddress = os.getComputerID!..":"..channel
+                
+                WNC.broadcast modemPort, channel, {"HYPERPAW_parent_request"}
+                
+                data = {}
+                while data.receiverAddress != thisAddress
+                    data, err = WNC.listen modemPort, channel, 5
+                    if not data and err == "timeout"
+                        break
+                
+                if data and data[1] == "HYPERPAW_parent_proposal"
+                    WDM.writeServerData channel, "network_channel"
+                    WDM.writeTempData data.senderAddress, "parent_address"
+                    WNC.send modemPort, data.senderAddress, thisAddress, data.senderAddress, {"HYPERPAW_child_registry"}
+                else
+                    printError "Timed out"
+            else
+                printError "Usage: network connect <modem port> <channel>"
+        disconnect: ->
+            WDM.writeServerData nil, "network_channel"
+            WDM.writeTempData nil, "parent_address"
         send: (modemPort, receiverAddress, destinationAddress, ...) ->
-            if ftype "string, string, string", modemPort, receiverAddress, destinationAddress
+            ok = ftype("string, string, string", modemPort, receiverAddress, destinationAddress) and WNC.checkModemPort(modemPort)
+            
+            if ok
                 channel = receiverAddress\match "(%d+)$"
                 sourceAddress = os.getComputerID!..":"..channel
                 return WNC.send modemPort, receiverAddress, sourceAddress, destinationAddress, {...}
@@ -421,7 +499,9 @@ pcall ->
         
         listen: (modemPort, channel, timeout) ->
             channel, timeout = tonumber(channel), tonumber(timeout)
-            if ftype "string, +number, ?+number", modemPort, channel, timeout
+            ok = ftype("string, +number, ?+number", modemPort, channel, timeout) and WNC.checkModemPort(modemPort)
+            
+            if ok
                 data = WNC.listen modemPort, channel, timeout
                 
                 if data
@@ -439,6 +519,37 @@ pcall ->
                     printError "Timed out"
             else
                 printError "Usage: network listen <modem port> <channel> <timeout>"
+    }
+
+-- Server command set
+pcall ->
+    WDM = require os.getSystemDir("apis").."WDM..lua"
+    WNC = require os.getSystemDir("apis").."WNC..lua"
+    commands.server = {
+        connect: (modemPort, serverAddress) ->
+            ok = ftype("string, string", modemPort, serverAddress) and WNC.checkModemPort(modemPort)
+            
+            if ok
+                channel = tonumber serverAddress\match "(%d+)$"
+                receiverAddress = WDM.readTempData "parent_address"
+                sourceAddress = os.getComputerID!..":"..channel
+                
+                WNC.send modemPort, receiverAddress, sourceAddress, serverAddress, {"connection_request"}
+                data = WNC.listen modemPort, channel, 5
+                
+                if data and data[1] == "connection_success"
+                    WDM.writeTempData data[2], "server_modules"
+                    WDM.writeServerData data.sourceAddress, "server_address"
+                    
+                    currentUser = nil
+                else
+                    printError "Timed out"
+            else
+                WDM.writeServerData nil, "server_address"
+                printError "Usage: server connect <modem port> <server>"
+        disconnect: ->
+            WDM.writeServerData nil, "server_address"
+            currentUser = nil
     }
 
 -- User Account command set
@@ -476,7 +587,10 @@ pcall ->
         create: (name, pass) ->
             if currentUser and currentUser.type == "admin"
                 if ftype "string, string", name, pass
-                    WAU.createUser name, hash.sha256 pass
+                    if not WAU.exists name
+                        WAU.createUser name, hash.sha256 pass
+                    else
+                        printError "Username already in use!"
                 else
                     printError "Usage: user create <name> <pass>"
             else
@@ -547,6 +661,9 @@ while running
     term.setTextColour promptText
     if term.getCursorPos! > 1
         print!
+    
+    if currentUser
+        write currentUser.name
     write "> "
     term.setTextColour userText
         
