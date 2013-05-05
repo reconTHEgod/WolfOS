@@ -10,18 +10,20 @@ ok, err = pcall ->
     print "WolfOS "..os.getVersion!.."...\n"
     sleep 0.01
     
-    WDM = require os.getSystemDir("apis").."WDM..lua"
-    WNC = require os.getSystemDir("apis").."WNC..lua"
-    WUI = require os.getSystemDir("apis").."WUI..lua"
+    WDM = os.getApiSided "WDM"
+    WNC = os.getApiSided "WNC"
+    WUI = os.getApiSided "WUI"
     
-    crypt = require os.getSystemDir("apis").."crypt..lua"
-    
+    crypt = require os.getSystemDir("apis").."crypt"
     peripheral = require "rom.apis.peripheral"
     textutils = require "rom.apis.textutils"
     
     print "Checking integrity of System files..."
     sleep 0.01
-    for k, v in pairs os.getSystemDir!
+    
+    _dirs = os.getSystemDir!
+    _dirs.apis, _dirs.server, _dirs.lang, _dirs.controlPanel = nil, nil, nil, nil
+    for k, v in ipairs _dirs
         if not fs.isDir v
             fs.makeDir v
     
@@ -42,19 +44,21 @@ ok, err = pcall ->
     
     localisation = {}
     
-    loadLocalisationFile = (path) ->
-        locale = path\gmatch("(%l+_%u+)%.xml")!
-        localisation[locale] = {}
-        file = WDM.readAll path
-        
-        for k, v in file\gmatch "<entry key=\"(.-)\">(.-)</entry>"
-            localisation[locale][k] = v
-        
-        print "Locale loaded: "..locale
-    
-    for i, path in ipairs fs.list os.getSystemDir "lang"
+    -- Load Locale files from HDD
+    searchPath = os.getSystemDir "lang"
+    for i, path in ipairs fs.list searchPath
         if not fs.isDir(path) and string.find(path, ".xml")
-            loadLocalisationFile os.getSystemDir("lang")..path
+            name, locale = os.getLocalisationFromFile searchPath..path
+            localisation[name] = locale
+            print "Locale loaded: "..name
+    
+    -- Load Locale files from ROM
+    searchPath = fs.combine("rom", searchPath).."/"
+    for i, path in ipairs fs.list searchPath
+        if not fs.isDir(path) and string.find(path, ".xml")
+            name, locale = os.getLocalisationFromFile searchPath..path
+            localisation[name] = locale
+            print "Locale loaded: "..name
     
     WDM.writeTempData localisation, "localisation"
     
@@ -123,21 +127,21 @@ ok, err = pcall ->
             
             print "Server module loaded: CORE"
             
-            loadModule = (path) ->
-                name = fs.getName path
-                return ->
-                    os.run {}, path
+            -- Load Server Modules from HDD
+            searchPath = os.getSystemDir "server"
+            for i, path in ipairs fs.list searchPath
+                if not fs.isDir(path) and string.find(path, ".lua")
+                    name, module = os.getModuleFromFile searchPath..path
+                    modules[name] = module
+                    print "Server module loaded: "..string.upper name
             
-            for k, module in ipairs fs.list os.getSystemDir "server"
-                path = os.getSystemDir("server")..module
-                if not fs.isDir(path) and string.find module, ".lua"
-                    moduleName = module\sub 1, (string.find(module, "%.") or #module + 1) - 1
-                    _modules = WDM.readServerData("server_modules")
-                    
-                    if _modules and type(_modules[moduleName]) == "number"
-                        modules[moduleName] = {channel: _modules[moduleName], thread: loadModule path}
-                    
-                    print "Server module loaded: "..string.upper moduleName
+            -- Load Server Modules from ROM
+            searchPath = fs.combine("rom", os.getSystemDir("server")).."/"
+            for i, path in ipairs fs.list searchPath
+                if not fs.isDir(path) and string.find(path, ".lua")
+                    name, module = os.getModuleFromFile searchPath..path
+                    modules[name] = module
+                    print "Server module loaded: "..string.upper name
             
             WDM.writeTempData modules, "server_modules"
         elseif WDM.readServerData "server_address"
@@ -168,19 +172,21 @@ ok, err = pcall ->
     
     themes = {}
     
-    loadThemeFile = (path) ->
-        name = path\gmatch("([%a%s]+)%.xml")!
-        themes[name] = {}
-        file = WDM.readAll path
-        
-        for k, v in file\gmatch "<entry key=\"(.-)\">(.-)</entry>"
-            themes[name][k] = v
-        
-        print "Theme loaded: "..name
-    
-    for i, path in ipairs fs.list os.getSystemDir "themes"
+    -- Load Theme files from ROM
+    searchPath = fs.combine("rom", os.getSystemDir("themes")).."/"
+    for i, path in ipairs fs.list searchPath
         if not fs.isDir(path) and string.find(path, ".xml")
-            loadThemeFile os.getSystemDir("themes")..path
+            name, theme = os.getThemeFromFile searchPath..path
+            themes[name] = theme
+            print "Theme loaded: "..name
+    
+    -- Load Theme files from HDD
+    searchPath = os.getSystemDir "themes"
+    for i, path in ipairs fs.list searchPath
+        if not fs.isDir(path) and string.find(path, ".xml")
+            name, theme = os.getThemeFromFile searchPath..path
+            themes[name] = theme
+            print "Theme loaded: "..name
     
     WDM.writeTempData themes, "themes"
     
@@ -229,6 +235,7 @@ debug.print "Dropping to WolfOS command line.\nType 'help' to view a list of ava
 running = true
 commandHistory = {}
 currentUser = nil
+currentPath = ""
     
 list = (data, sort = true) ->
     if sort
@@ -337,57 +344,6 @@ commands = {
             
         else
             printError "You do not have permission to perform this action!"
-    debug: (filepath) ->
-        if ftype "string", filepath
-            clear!
-            term.setTextColour text
-            print "Debugging '"..fs.getName(filepath).."'.\n"
-            i = 0
-            lines = WDM.readToTable filepath
-            w, h = term.getSize!
-            
-            redraw = ->
-                for n = 3, h
-                    line = n - 2
-                    
-                    term.setCursorPos 1, n
-                    term.setBackgroundColour colours.white
-                    term.setTextColour colours.blue
-                    term.write string.sub tostring(line), 1 , #tostring(line) - 2
-                    
-                    term.setTextColour colours.white
-                    term.setCursorPos 3, n
-                    
-                    if line == i
-                        term.setBackgroundColour colours.red
-                    else
-                        term.setBackgroundColour colours.black
-                    if lines[line]
-                        term.write lines[line]
-                    else
-                        break
-            
-            step = ->
-                for k, v in ipairs lines
-                    i = k
-                    redraw!
-                    func, err = loadstring v, "line #"..i
-                    if func
-                        ok, err = pcall func
-                        if not ok
-                            printError "\n"..err
-                            break
-                    else
-                        printError "\n"..err
-                        break
-                    coroutine.yield!
-            
-            co = coroutine.create step
-            while coroutine.status(co) != "dead"
-                os.pullEvent "key"
-                coroutine.resume co
-        else
-            printError "Usage: debug <filepath>"
     shutdown: -> os.shutdown!
     reboot: -> os.reboot!
 }
@@ -404,7 +360,69 @@ commands.help = ->
 
 -- Data Handling command set
 pcall ->
-    WDM = require os.getSystemDir("apis").."WDM..lua"
+    WDM = os.getApiSided "WDM"
+    WFH = os.getApiSided "WFH"
+    
+    resolve = (path) ->
+        startChar = path\sub 1, 1
+        
+        if startChar == "/"
+            return fs.combine "", path
+        else
+            return fs.combine currentPath, path
+    
+    commands.cd = (path) ->
+        if ftype "string", path
+            newPath = resolve path
+            
+            if WFH.isDir newPath
+                currentPath = newPath
+            else
+                printError "Invalid path"
+        else
+            printError "Usage: cd <path>"
+    commands.list = (path = currentPath) ->
+        dirs = WFH.list path, "dirs"
+        files = WFH.list path, "files"
+        
+        if term.isColour! then term.setTextColour 512 -- Cyan
+        list dirs
+        
+        term.setTextColour text
+        list files
+    commands.delete = (path) ->
+        if ftype "string", path
+            newPath = resolve path
+            WFH.delete newPath
+        else
+            printError "Usage: delete <path>"
+    commands.copy = (srcPath, destPath) ->
+        if ftype "string, string", srcPath, destPath
+            srcPath = resolve srcPath
+            destPath = resolve destPath
+            
+            if fs.exists(destPath) and fs.isDir(destPath)
+                destPath = fs.combine destPath, fs.getName srcPath
+            
+            WFH.copy srcPath, destPath
+        else
+            printError "Usage: copy <source> <destination>"
+    commands.move = (srcPath, destPath) ->
+        if ftype "string, string", srcPath, destPath
+            srcPath = resolve srcPath
+            destPath = resolve destPath
+            
+            if fs.exists(destPath) and fs.isDir(destPath)
+                destPath = fs.combine destPath, fs.getName srcPath
+            
+            WFH.move srcPath, destPath
+        else
+            printError "Usage: move <source> <destination>"
+    commands.rename = (srcPath, destPath) ->
+        if ftype "string, string", srcPath, destPath
+            commands.move srcPath, destPath
+        else
+            printError "Usage: rename <source> <destination>"
     commands.data = {
         read: (type, key) ->
             if ftype "?string, ?string", type, key
@@ -458,8 +476,8 @@ pcall ->
 
 -- HyperPaw Network command set
 pcall ->
-    WDM = require os.getSystemDir("apis").."WDM..lua"
-    WNC = require os.getSystemDir("apis").."WNC..lua"
+    WDM = os.getApiSided "WDM"
+    WNC = os.getApiSided "WNC"
     commands.network = {
         connect: (modemPort, channel) ->
             channel = tonumber channel
@@ -523,8 +541,8 @@ pcall ->
 
 -- Server command set
 pcall ->
-    WDM = require os.getSystemDir("apis").."WDM..lua"
-    WNC = require os.getSystemDir("apis").."WNC..lua"
+    WDM = os.getApiSided "WDM"
+    WNC = os.getApiSided "WNC"
     commands.server = {
         connect: (modemPort, serverAddress) ->
             ok = ftype("string, string", modemPort, serverAddress) and WNC.checkModemPort(modemPort)
@@ -539,9 +557,11 @@ pcall ->
                 
                 if data and data[1] == "connection_success"
                     WDM.writeTempData data[2], "server_modules"
+                    WDM.writeServerData false, "server_state"
                     WDM.writeServerData data.sourceAddress, "server_address"
                     
                     currentUser = nil
+                    os.reboot!
                 else
                     printError "Timed out"
             else
@@ -549,13 +569,15 @@ pcall ->
                 printError "Usage: server connect <modem port> <server>"
         disconnect: ->
             WDM.writeServerData nil, "server_address"
+            WDM.writeServerData true, "server_state"
             currentUser = nil
+            os.reboot!
     }
 
 -- User Account command set
 pcall ->
-    WAU = require os.getSystemDir("apis").."WAU..lua"
-    hash = require os.getSystemDir("apis").."hash..lua"
+    WAU = os.getApiSided "WAU"
+    hash = require os.getSystemDir("apis").."hash"
     commands.users = ->
         t = WAU.getUsers!
         if t
@@ -662,8 +684,8 @@ while running
     if term.getCursorPos! > 1
         print!
     
-    if currentUser
-        write currentUser.name
+    if currentPath
+        write currentPath
     write "> "
     term.setTextColour userText
         

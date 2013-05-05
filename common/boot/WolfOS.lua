@@ -8,7 +8,7 @@ function os.getVersion()
 end
 
 -- WolfOS directory mappings
-local _root = "/WolfOS/"
+local _root = "WolfOS/"
 local _apis, _client, _server, _data, _lang = _root.."apis/", _root.."client/", _root.."server/", _root.."data/", _root.."lang/"
 local _apps, _controlPanel, _themes, _users = _client.."applications/", _client.."controlPanel/", _client.."themes/", _data.."users/"
 local _WOLFOS_DIRS = {
@@ -26,7 +26,7 @@ local _WOLFOS_DIRS = {
 
 function os.getSystemDir(k)
 	if not k then
-		return _WOLFOS_DIRS
+		return {unpack(_WOLFOS_DIRS)}
 	end
 	return _WOLFOS_DIRS[k]
 end
@@ -199,7 +199,7 @@ do
 		finders = {
 			direct
 		},
-		paths = "?;?.lua;?/init.lua;APIS/?;APIS/?.lua;APIS/?/init.lua;packages/?;packages/?.lua;packages/?/init.lua;packages/?/?;packages/?/?.lua;/",
+		paths = "?;?.lua;rom/?;rom/?.lua;rom/apis/?;rom/apis/?.lua;",
 		lua_requirer = {
 			required = {},
 			required_envs = {},
@@ -207,7 +207,7 @@ do
 		},
 	}
 	
-	local function lua_requirer(path, cenv, env, renv, rerun, args)
+	local function lua_requirer(path, env, renv, rerun, args)
 		local err_prefix = "lua_requirer:"
 		local vars = loadreq.lua_requirer
 		local _, ext = getNameExpansion(path)
@@ -253,18 +253,10 @@ do
 	end
 	loadreq.requirers = {lua = lua_requirer}
 	
-	local function _find(s, paths, caller_env)
+	local function _find(s, paths)
 		local err = {"_find: finding "..tostring(s)}
 		
-		if paths then
-			-- do nothing
-		elseif caller_env.REQUIRE_PATH then
-			paths = caller_env.REQUIRE_PATH
-		elseif caller_env.PACKAGE_NAME and caller_env.FILE_PATH then
-			paths = suffix(string.match(caller_env.FILE_PATH, "^(.*"..caller_env.PACKAGE_NAME..")"))..";"..loadreq.paths
-		elseif caller_env.FILE_PATH then
-			paths = suffix(getDir(caller_env.FILE_PATH))..";"..loadreq.paths
-		else
+		if not paths then
 			paths = loadreq.paths
 		end
 		
@@ -285,16 +277,16 @@ do
 			end
 		end
 		
-		table.insert(err, "_find:file not found:"..s.."\ncaller path = "..(caller_env.FILE_PATH or "not available"))
+		table.insert(err, "_find:file not found:"..s)
 		local serr = table.concat(err, "\n")
 		return nil, serr
 	end
 	
-	local function _require(s, paths, caller_env, ...)
+	local function _require(s, paths, ...)
 		local err = {}
 		table.insert(err, "loadreq:require: while requiring "..tostring(s))
 		
-		local path, e = _find(s, paths, caller_env)
+		local path, e = _find(s, paths)
 		if path == nil then
 			table.insert(err, e)
 			local serr = table.concat(err, "\n")
@@ -302,7 +294,7 @@ do
 		end
 		
 		for req_name, requirer in pairs(loadreq.requirers) do
-			local r, e = requirer(path, caller_env, ...)
+			local r, e = requirer(path, ...)
 			
 			if not r then
 				table.insert(err, e)
@@ -313,7 +305,7 @@ do
 	end
 	
 	function require(s, paths, ...)
-		local t, e = _require(s, paths, getfenv(2), ...)
+		local t, e = _require(s, paths, ...)
 		
 		if not t then
 			error(e, 2)
@@ -323,7 +315,7 @@ do
 	
 	function include(s, paths, ...)
 		local caller_env = getfenv(2)
-		local te, e = _require(s, paths, caller_env, ...)
+		local te, e = _require(s, paths, ...)
 		
 		if not t then
 			error(e, 2)
@@ -640,7 +632,7 @@ do
 		table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
 		processCount = processCount + 1
 		
-		os.queueEvent("added_process")
+		os.queueEvent("added_process", key)
 	end
 	
 	function os.removeProcess(key)
@@ -713,12 +705,66 @@ do
 		return false
 	end
 	
-	function os.loadAPI() -- @DEPRECATED in favour of require() and include()
-		error("Deprecated: os.loadAPI, use require() or include() instead", 2)
+	local WDM = require(os.getSystemDir("apis").."WDM")
+	function os.getApiSided(api)
+		local path = "wolfos."
+		if fs.exists("rom/WolfOS/apis") then
+			path = "rom."..path
+		end
+		
+		local serverApi = require(path.."apis."..api)
+		local clientApi = {}
+		
+		if not WDM.readServerData("server_state") then
+			ok, clientApi = pcall(function() return require(path.."client.apis."..api) end)
+			
+			if ok and clientApi then
+				for k, v in pairs(serverApi) do
+					if not clientApi[k] then
+						clientApi[k] = v
+					end
+				end
+				
+				return clientApi
+			end
+		end
+		
+		return serverApi
 	end
 	
-	function os.unloadAPI() -- @DEPRECATED for redundancy due to use of require() and include()
-		error("Deprecated: os.unloadAPI, no replacement needed [see require() and include()]", 2)
+	function os.getLocalisationFromFile(path)
+        locale = path:gmatch("(%l+_%u+)%.xml")()
+        localisation = {}
+        file = WDM.readAll(path)
+        
+        for k, v in file:gmatch("<entry key=\"(.-)\">(.-)</entry>") do
+            localisation[k] = v
+		end
+        
+		return locale, localisation
+	end
+	
+	function os.getThemeFromFile(path)
+		name = path:gmatch("([%w%s]+)%.xml")()
+        theme = {}
+        file = WDM.readAll(path)
+        
+        for k, v in file:gmatch("<entry key=\"(.-)\">(.-)</entry>") do
+            theme[k] = v
+		end
+        
+		return name, theme
+	end
+	
+	function os.getModuleFromFile(path)
+        name = path:gmatch("(%a+)%.lua")()
+		_modules = WDM.readServerData("server_modules")
+        
+        if _modules and type(_modules[name]) == "number" then
+            module = {["channel"] = _modules[name], ["thread"] = function() os.run({}, path) end}
+		end
+        
+		return name, module
 	end
 	
 	local nativeShutdown = os.shutdown
@@ -763,7 +809,13 @@ end
 
 -- Run the shell
 local ok, err = pcall(function()
-	os.run({}, os.getSystemDir("root").."shell.lua")
+	if fs.exists(os.getSystemDir("root").."shell.lua") then
+		os.run({}, os.getSystemDir("root").."shell.lua")
+	elseif fs.exists("rom/"..os.getSystemDir("root").."shell.lua") then
+		os.run({}, "rom/"..os.getSystemDir("root").."shell.lua")
+	else
+		error("No WolfOS Shell file found!")
+	end
 end)
 
 -- If the shell errored, let the user read it.

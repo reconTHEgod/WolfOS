@@ -1,8 +1,8 @@
 -- WolfOS User Server Module
 
-WDM = require os.getSystemDir("apis").."WDM..lua"
-WNC = require os.getSystemDir("apis").."WNC..lua"
-WAU = require os.getSystemDir("apis").."WAU..lua"
+WDM = os.getApiSided "WDM"
+WNC = os.getApiSided "WNC"
+WAU = os.getApiSided "WAU"
 
 pcall ->
     modemPort = WDM.readServerData "modem_port"
