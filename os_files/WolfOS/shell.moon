@@ -7,8 +7,11 @@ ok, err = pcall ->
     if not os.getComputerLabel!
         os.setComputerLabel "ID #"..os.getComputerID!
     
-    print "WolfOS "..os.getVersion!.."...\n"
-    sleep 0.01
+    logAndDisplay = (message, level) ->
+        t = log message, level
+        print "["..t.level.."] "..t.message
+    
+    logAndDisplay "Initializing WolfOS "..os.getVersion!
     
     WDM = os.getApiSided "WDM"
     WNC = os.getApiSided "WNC"
@@ -18,8 +21,7 @@ ok, err = pcall ->
     peripheral = require "rom.apis.peripheral"
     textutils = require "rom.apis.textutils"
     
-    print "Checking integrity of System files..."
-    sleep 0.01
+    logAndDisplay "Checking integrity of System files"
     
     _dirs = os.getSystemDir!
     _dirs.apis, _dirs.server, _dirs.lang, _dirs.controlPanel = nil, nil, nil, nil
@@ -33,10 +35,8 @@ ok, err = pcall ->
         WDM.write os.getSystemDir("data").."server.dat", crypt.toBase64 textutils.serialize {}
     if not WDM.exists os.getSystemDir("data").."users.dat"
         WDM.write os.getSystemDir("data").."users.dat", crypt.toBase64 textutils.serialize {}
-    print "Done.\n"
     
-    print "Loading Language Localisation..."
-    sleep 0.01
+    logAndDisplay "Loading Language Localisation"
     currentLocale = WDM.readClientData "current_locale"
     if not currentLocale
         currentLocale = "en_UK"
@@ -50,7 +50,7 @@ ok, err = pcall ->
         if not fs.isDir(path) and string.find(path, ".xml")
             name, locale = os.getLocalisationFromFile searchPath..path
             localisation[name] = locale
-            print "Locale loaded: "..name
+            logAndDisplay "Locale loaded: "..name
     
     -- Load Locale files from ROM
     searchPath = fs.combine("rom", searchPath).."/"
@@ -58,7 +58,7 @@ ok, err = pcall ->
         if not fs.isDir(path) and string.find(path, ".xml")
             name, locale = os.getLocalisationFromFile searchPath..path
             localisation[name] = locale
-            print "Locale loaded: "..name
+            logAndDisplay "Locale loaded: "..name
     
     WDM.writeTempData localisation, "localisation"
     
@@ -69,7 +69,7 @@ ok, err = pcall ->
     
     modules = {}
     if modemPort
-        print "\nAttempting to connect to network..."
+        logAndDisplay "Attempting to connect to network"
         sleep 0.01
         
         channel = WDM.readServerData "network_channel"
@@ -91,13 +91,12 @@ ok, err = pcall ->
             WDM.writeTempData data.senderAddress, "parent_address"
             WNC.send modemPort, data.senderAddress, thisAddress, data.senderAddress, {"HYPERPAW_child_registry"}
             
-            print "Connection established."
+            logAndDisplay "Connection established"
         else
-            print "Connection timed out."
+            logAndDisplay "Connection timed out", "warning"
         
         if WDM.readServerData "server_state"
-            print "\nLoading Server modules..."
-            sleep 0.01
+            logAndDisplay "Loading Server modules"
             
             modules.core = {
                 channel: channel
@@ -125,7 +124,7 @@ ok, err = pcall ->
                                     WNC.send modemPort, data.senderAddress, thisAddress, data.sourceAddress, {"connection_failure", "not_whitelisted"}
             }
             
-            print "Server module loaded: CORE"
+            logAndDisplay "Server module loaded: CORE"
             
             -- Load Server Modules from HDD
             searchPath = os.getSystemDir "server"
@@ -133,7 +132,7 @@ ok, err = pcall ->
                 if not fs.isDir(path) and string.find(path, ".lua")
                     name, module = os.getModuleFromFile searchPath..path
                     modules[name] = module
-                    print "Server module loaded: "..string.upper name
+                    logAndDisplay "Server module loaded: "..string.upper name
             
             -- Load Server Modules from ROM
             searchPath = fs.combine("rom", os.getSystemDir("server")).."/"
@@ -141,12 +140,11 @@ ok, err = pcall ->
                 if not fs.isDir(path) and string.find(path, ".lua")
                     name, module = os.getModuleFromFile searchPath..path
                     modules[name] = module
-                    print "Server module loaded: "..string.upper name
+                    logAndDisplay "Server module loaded: "..string.upper name
             
             WDM.writeTempData modules, "server_modules"
-        elseif WDM.readServerData "server_address"
-            print "\nAttempting to connect to server..."
-            sleep 0.01
+        elseif WDM.readTempData "parent_address" and WDM.readServerData "server_address"
+            logAndDisplay "Attempting to connect to server"
             
             serverAddress = WDM.readServerData "server_address"
             receiverAddress = WDM.readTempData "parent_address"
@@ -159,12 +157,11 @@ ok, err = pcall ->
                 WDM.writeTempData data[2], "server_modules"
                 WDM.writeServerData data.sourceAddress, "server_address"
                 
-                print "Connection established."
+                logAndDisplay "Connection established"
             elseif not data and err == "timeout"
-                print "Connection timed out."
+                logAndDisplay "Connection timed out", "warning"
     
-    print "\nLoading Themes..."
-    sleep 0.01
+    logAndDisplay "Loading Themes"
     theme = WDM.readClientData "current_theme"
     if not theme
         theme = "Default"
@@ -178,7 +175,7 @@ ok, err = pcall ->
         if not fs.isDir(path) and string.find(path, ".xml")
             name, theme = os.getThemeFromFile searchPath..path
             themes[name] = theme
-            print "Theme loaded: "..name
+            logAndDisplay "Theme loaded: "..name
     
     -- Load Theme files from HDD
     searchPath = os.getSystemDir "themes"
@@ -186,17 +183,17 @@ ok, err = pcall ->
         if not fs.isDir(path) and string.find(path, ".xml")
             name, theme = os.getThemeFromFile searchPath..path
             themes[name] = theme
-            print "Theme loaded: "..name
+            logAndDisplay "Theme loaded: "..name
     
     WDM.writeTempData themes, "themes"
     
-    print "\nLoading User Interface..."
-    sleep 0.01
+    logAndDisplay "Loading User Interface"
     if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
-        error WUI.getLocalisedString("error.shell.screen_dims"), 0
+        log WUI.getLocalisedString("error.shell.screen_dims"), "severe"
+        error ""
     if not term.isColour!
-        error WUI.getLocalisedString("error.shell.screen_colour"), 0
-    print "Done.\n"
+        log WUI.getLocalisedString("error.shell.screen_colour"), "severe"
+        error ""
     
     _SYSTEM_THREAD = ->
         os.run {}, os.getSystemDir("client").."startup.lua"
@@ -206,21 +203,27 @@ ok, err = pcall ->
     for k, v in pairs modules
         os.addProcess string.upper(k).."_NETWORK_THREAD", v.thread
     
-    ok, err = os.startProcesses!
+    ok, err, process = os.startProcesses!
     if not ok
-        error err
+        log err, "severe", process
+        error ""
 
 -- Display error if OS errored
 term.setBackgroundColour 32768 -- Black
 term.setTextColour 1 -- White
-debug.clear!
+clear!
 if not ok
-    if err
-        debug.print "An error occured during initialization:"
-        debug.printError err
-    else
-        debug.print "An unknown error occured during initialization."
-    debug.print!
+    printError "WolfOS has encountered an issue."
+    
+    dumpLocation = os.getSystemDir("root").."error_dump.log"
+    file = fs.open dumpLocation, "w"
+    
+    if file
+        for k, v in ipairs getLogBuffer!
+            file.writeLine "["..v.level.."]["..v.thread.."] "..v.message
+        
+        file.close!
+        print "The error log has been dumped to: "..dumpLocation.."\n"
 
 -- Command line colours
 backgroundColour = 32768 -- Black
@@ -230,7 +233,7 @@ text = if term.isColour! then 16 else 1 -- Yellow else White
 
 -- Drop to command line
 term.setTextColour text
-debug.print "Dropping to WolfOS command line.\nType 'help' to view a list of available commands.\n"
+print "Dropping to WolfOS command line.\nType 'help' to view a list of available commands.\n"
 
 running = true
 commandHistory = {}
@@ -282,6 +285,14 @@ commands = {
                 printError "Unknown api: "..api
         else
             printError "Usage: functions <api>"
+    log: ->
+        buffer = getLogBuffer!
+        t = {}
+        
+        for k, v in ipairs buffer
+            table.insert t, "["..v.level.."]["..v.thread.."] "..v.message
+        
+        list t
     lua: (script) ->
         if currentUser and currentUser.type == "admin"
             luaRunning = true

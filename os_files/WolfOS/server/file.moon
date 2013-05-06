@@ -8,7 +8,8 @@ pcall ->
     modemPort = WDM.readServerData "modem_port"
     channel = WDM.readTempData("server_modules").file.channel
     if not channel
-        error!
+        log "No channel set for Server Module: FILE", "warning", "FILE_NETWORK_THREAD"
+        error ""
     
     relay = WDM.readTempData "parent_address"
     thisAddress = os.getComputerID!..":"..channel

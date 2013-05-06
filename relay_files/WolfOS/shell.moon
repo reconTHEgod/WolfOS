@@ -254,7 +254,15 @@ _SYSTEM_THREAD = ->
         reboot: -> os.reboot!
         info: ->
             print "HyperPaw Networking - in association with WolfOS.\nCopyright 2013 James Chapman (toxic.wolf666@gmail.com)"
-        host: (modemPort, channel) ->
+        log: ->
+            buffer = getLogBuffer!
+            t = {}
+            
+            for k, v in ipairs buffer
+                table.insert t, "["..v.level.."]["..v.thread.."] "..v.message
+            
+            list t
+        host: (modemPort, channel = 7000) ->
             if not systemData.connected
                 cont = false
                 if modemPort == "top" or modemPort == "bottom" or modemPort == "front" or modemPort == "back" or modemPort == "left" or modemPort == "right"
@@ -277,7 +285,7 @@ _SYSTEM_THREAD = ->
                     os.addProcess "COMMUNICATION_THREAD", _COMMUNICATION_THREAD
                     print "Hosting network relay point..."
                 else
-                    printError "Usage: connect <modem port> <channel>"
+                    printError "Usage: connect <modem port> [channel]"
             else
                 printError "Already hosting network relay point!"
         close: ->

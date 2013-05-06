@@ -553,6 +553,36 @@ do
 	debug.read = read
 end
 
+-- Install log API
+do
+	local logBuffer = {}
+	local logLevels = {["info"] = "INFO", ["warning"] = "WARNING", ["severe"] = "SEVERE"}
+	
+	function log(message, level, thread)
+		if not logLevels[level] then
+			level = "info"
+		end
+		if not ftype("string", thread) then
+			thread = "STDOUT"
+		end
+		
+		if ftype("string", message) then
+			t = {["message"] = message, ["level"] = logLevels[level], ["thread"] = thread}
+			table.insert(logBuffer, t)
+			
+			return t
+		end
+	end
+	
+	function getLogBuffer(k)
+		if k then
+			return logBuffer[k]
+		else
+			return logBuffer
+		end
+	end
+end
+
 -- Install Globals
 do
 	function sleep(_time)
@@ -632,6 +662,7 @@ do
 		table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
 		processCount = processCount + 1
 		
+		log("Added process: "..key)
 		os.queueEvent("added_process", key)
 	end
 	
@@ -659,7 +690,7 @@ do
 					if filters[v.thread] == nil or filters[v.thread] == eventData[1] or filters[v.thread] == "terminate" then
 						ok, param = coroutine.resume(v.thread, unpack(eventData))
 						if not ok then
-							return false, "Process: "..v.key..": "..param
+							return false, param, v.key
 						else
 							filters[v.thread] = param
 						end
@@ -671,6 +702,8 @@ do
 				if v and (coroutine.status(v.thread) == "dead" or (eventData[1] == "terminate_process" and eventData[2] == v.key)) then
 					table.remove(processes, i)
 					processCount = processCount - 1
+					log("Removed dead or terminated process: "..v.key)
+					
 					if processCount < 1 then
 						return true, nil
 					end
