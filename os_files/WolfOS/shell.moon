@@ -9,13 +9,13 @@ ok, err = pcall ->
     
     logAndDisplay = (message, level) ->
         t = log message, level
-        print "["..t.level.."] "..t.message
+        print "["..t.level.."]["..t.thread.."] "..t.message
     
     logAndDisplay "Initializing WolfOS "..os.getVersion!
     
-    WDM = os.getApiSided "WDM"
-    WNC = os.getApiSided "WNC"
-    WUI = os.getApiSided "WUI"
+    WDM = os.getApi "WDM"
+    WNC = os.getApi "WNC"
+    WUI = os.getApi "WUI"
     
     crypt = require os.getSystemDir("apis").."crypt"
     peripheral = require "rom.apis.peripheral"
@@ -68,6 +68,8 @@ ok, err = pcall ->
         WDM.writeServerData "", "modem_port"
     
     modules = {}
+    WDM.writeTempData "Side.SERVER", "current_side"
+    
     if modemPort
         logAndDisplay "Attempting to connect to network"
         sleep 0.01
@@ -143,7 +145,7 @@ ok, err = pcall ->
                     logAndDisplay "Server module loaded: "..string.upper name
             
             WDM.writeTempData modules, "server_modules"
-        elseif WDM.readTempData "parent_address" and WDM.readServerData "server_address"
+        elseif WDM.readTempData("parent_address") and WDM.readServerData("server_address")
             logAndDisplay "Attempting to connect to server"
             
             serverAddress = WDM.readServerData "server_address"
@@ -155,6 +157,7 @@ ok, err = pcall ->
             
             if data and data[1] == "connection_success"
                 WDM.writeTempData data[2], "server_modules"
+                WDM.writeTempData "Side.CLIENT", "current_side"
                 WDM.writeServerData data.sourceAddress, "server_address"
                 
                 logAndDisplay "Connection established"
@@ -213,6 +216,7 @@ term.setBackgroundColour 32768 -- Black
 term.setTextColour 1 -- White
 clear!
 if not ok
+    log err, "severe"
     printError "WolfOS has encountered an issue."
     
     dumpLocation = os.getSystemDir("root").."error_dump.log"
@@ -292,7 +296,7 @@ commands = {
         for k, v in ipairs buffer
             table.insert t, "["..v.level.."]["..v.thread.."] "..v.message
         
-        list t
+        list t, false
     lua: (script) ->
         if currentUser and currentUser.type == "admin"
             luaRunning = true
@@ -371,8 +375,8 @@ commands.help = ->
 
 -- Data Handling command set
 pcall ->
-    WDM = os.getApiSided "WDM"
-    WFH = os.getApiSided "WFH"
+    WDM = os.getApi "WDM"
+    WFH = os.getApi "WFH"
     
     resolve = (path) ->
         startChar = path\sub 1, 1
@@ -487,8 +491,8 @@ pcall ->
 
 -- HyperPaw Network command set
 pcall ->
-    WDM = os.getApiSided "WDM"
-    WNC = os.getApiSided "WNC"
+    WDM = os.getApi "WDM"
+    WNC = os.getApi "WNC"
     commands.network = {
         connect: (modemPort, channel) ->
             channel = tonumber channel
@@ -552,8 +556,8 @@ pcall ->
 
 -- Server command set
 pcall ->
-    WDM = os.getApiSided "WDM"
-    WNC = os.getApiSided "WNC"
+    WDM = os.getApi "WDM"
+    WNC = os.getApi "WNC"
     commands.server = {
         connect: (modemPort, serverAddress) ->
             ok = ftype("string, string", modemPort, serverAddress) and WNC.checkModemPort(modemPort)
@@ -567,27 +571,88 @@ pcall ->
                 data = WNC.listen modemPort, channel, 5
                 
                 if data and data[1] == "connection_success"
+                    WDM.writeTempData "Side.CLIENT", "current_side"
                     WDM.writeTempData data[2], "server_modules"
                     WDM.writeServerData false, "server_state"
                     WDM.writeServerData data.sourceAddress, "server_address"
                     
                     currentUser = nil
-                    os.reboot!
                 else
                     printError "Timed out"
             else
                 WDM.writeServerData nil, "server_address"
                 printError "Usage: server connect <modem port> <server>"
         disconnect: ->
+            WDM.writeTempData "Side.SERVER", "current_side"
             WDM.writeServerData nil, "server_address"
             WDM.writeServerData true, "server_state"
             currentUser = nil
-            os.reboot!
+        modules: ->
+            modules = WDM.readTempData "server_modules"
+            _modules = {}
+            t = {}
+            
+            for i, name in ipairs fs.list os.getSystemDir "server"
+                name = name\gmatch("(%a+)%.lua")!
+                if name
+                    module = modules[name]
+                    channel = if module then module.channel else "-"
+                    t[name] = string.upper(name)..": "..channel
+            for i, name in ipairs fs.list "rom/"..os.getSystemDir "server"
+                name = name\gmatch("(%a+)%.lua")!
+                if name
+                    module = modules[name]
+                    channel = if module then module.channel else "-"
+                    t[name] = string.upper(name)..": "..channel
+            for k, v in pairs modules
+                t[k] = string.upper(k)..": "..(v.channel or "-")
+            for k, v in pairs t
+                table.insert _modules, v
+            
+            list _modules
+        add: (name, channel) ->
+            channel = tonumber channel
+            
+            if ftype "string, +number", name, channel
+                modules = WDM.readServerData("server_modules") or {}
+                modules[name] = channel
+                
+                module = nil
+                if fs.exists os.getSystemDir("server")..string.lower(name)..".lua"
+                    name, module = os.getModuleFromFile os.getSystemDir("server")..string.lower(name)..".lua"
+                elseif fs.exists "rom/"..os.getSystemDir("server")..string.lower(name)..".lua"
+                    name, module = os.getModuleFromFile "rom/"..os.getSystemDir("server")..string.lower(name)..".lua"
+                
+                _modules = WDM.readTempData "server_modules"
+                _modules[name] = module
+                
+                os.addProcess string.upper(name).."_NETWORK_THREAD", module.thread
+                
+                log "Server module loaded: "..string.upper name
+                WDM.writeTempData _modules, "server_modules"
+                WDM.writeServerData modules, "server_modules"
+            else
+                printError "Usage: server add <module name> <channel>"
+        remove: (name) ->
+            if ftype "string", name
+                modules = WDM.readServerData("server_modules") or {}
+                modules[name] = nil
+                
+                _modules = WDM.readTempData "server_modules"
+                _modules[name] = nil
+                
+                os.removeProcess string.upper(name).."_NETWORK_THREAD"
+                
+                log "Server module unloaded: "..string.upper name
+                WDM.writeTempData _modules, "server_modules"
+                WDM.writeServerData modules, "server_modules"
+            else
+                printError "Usage: server remove <module name>"
     }
 
 -- User Account command set
 pcall ->
-    WAU = os.getApiSided "WAU"
+    WAU = os.getApi "WAU"
     hash = require os.getSystemDir("apis").."hash"
     commands.users = ->
         t = WAU.getUsers!

@@ -1,6 +1,6 @@
 -- WolfOS User Interface Library
 
-WDM = os.getApiSided "WDM"
+WDM = os.getApi "WDM"
 
 export getLocalisedString = (key) ->
     s = WDM.readTempData("localisation")[WDM.readClientData("current_locale")][key]

@@ -659,6 +659,10 @@ do
 			error(err, 2)
 		end
 		
+		local env = getfenv(process)
+		env["_process_key"] = key
+		setfenv(process, env)
+		
 		table.insert(processes, {["key"] = key, ["thread"] = createProcess(process)})
 		processCount = processCount + 1
 		
@@ -668,6 +672,7 @@ do
 	
 	function os.removeProcess(key)
 		if ftype("string", key) then
+			log("Removed process: "..key)
 			os.queueEvent("terminate_process", key)
 		end
 	end
@@ -702,7 +707,6 @@ do
 				if v and (coroutine.status(v.thread) == "dead" or (eventData[1] == "terminate_process" and eventData[2] == v.key)) then
 					table.remove(processes, i)
 					processCount = processCount - 1
-					log("Removed dead or terminated process: "..v.key)
 					
 					if processCount < 1 then
 						return true, nil
@@ -718,7 +722,7 @@ do
 		local fnFile, err = loadfile(_path)
 		if fnFile then
 			local env = _env
-			--setmetatable(env, {__index = function(t,k) return _G[k] end})
+			
 			setmetatable(env, {__index = _G })
 			setfenv(fnFile, env)
 			local ok, err = pcall(function()
@@ -738,33 +742,16 @@ do
 		return false
 	end
 	
-	local WDM = require(os.getSystemDir("apis").."WDM")
-	function os.getApiSided(api)
+	function os.getApi(api)
 		local path = "wolfos."
 		if fs.exists("rom/WolfOS/apis") then
 			path = "rom."..path
 		end
 		
-		local serverApi = require(path.."apis."..api)
-		local clientApi = {}
-		
-		if not WDM.readServerData("server_state") then
-			ok, clientApi = pcall(function() return require(path.."client.apis."..api) end)
-			
-			if ok and clientApi then
-				for k, v in pairs(serverApi) do
-					if not clientApi[k] then
-						clientApi[k] = v
-					end
-				end
-				
-				return clientApi
-			end
-		end
-		
-		return serverApi
+		return require(path.."apis."..api)
 	end
 	
+	local WDM = require(os.getSystemDir("apis").."WDM")
 	function os.getLocalisationFromFile(path)
         locale = path:gmatch("(%l+_%u+)%.xml")()
         localisation = {}

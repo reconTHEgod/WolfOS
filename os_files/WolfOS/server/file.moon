@@ -1,8 +1,8 @@
 -- WolfOS User Server Module
 
-WDM = os.getApiSided "WDM"
-WNC = os.getApiSided "WNC"
-WFH = os.getApiSided "WFH"
+WDM = os.getApi "WDM"
+WNC = os.getApi "WNC"
+WFH = os.getApi "WFH"
 
 pcall ->
     modemPort = WDM.readServerData "modem_port"
