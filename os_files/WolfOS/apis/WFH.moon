@@ -1,7 +1,7 @@
 -- WolfOS File Handler
 
-WDM = os.getApiSided "WDM"
-WNC = os.getApiSided "WNC"
+WDM = os.getApi "WDM"
+WNC = os.getApi "WNC"
 
 getSide = -> return WDM.readTempData "current_side"
 getModemPort = -> return WDM.readServerData "modem_port"
