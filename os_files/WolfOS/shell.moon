@@ -199,7 +199,12 @@ ok, err = pcall ->
         error ""
     
     _SYSTEM_THREAD = ->
-        os.run {}, os.getSystemDir("client").."startup.lua"
+        if fs.exists "rom/"..os.getSystemDir("client").."startup.lua"
+            os.run {}, "rom/"..os.getSystemDir("client").."startup.lua"
+        elseif fs.exists os.getSystemDir("client").."startup.lua"
+            os.run {}, os.getSystemDir("client").."startup.lua"
+        else
+            error "No startup.lua file found!"
     
     os.addProcess "SYSTEM_THREAD", _SYSTEM_THREAD
     

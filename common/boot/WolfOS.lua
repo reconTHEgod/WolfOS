@@ -834,7 +834,7 @@ local ok, err = pcall(function()
 	elseif fs.exists("rom/"..os.getSystemDir("root").."shell.lua") then
 		os.run({}, "rom/"..os.getSystemDir("root").."shell.lua")
 	else
-		error("No WolfOS Shell file found!")
+		error("No shell.lua file found!")
 	end
 end)
 
