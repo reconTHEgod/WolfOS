@@ -9,6 +9,22 @@ export getLocalisedString = (key) ->
         return s
     return key
 
+export getValueInTheme = (key) ->
+    s = WDM.readTempData("themes")[WDM.readClientData("current_theme")][key]
+    
+    if s and s != ""
+        return s
+    return WDM.readTempData("themes")["Default"][key]
+
+export getFileInTheme = (key) ->
+    theme = WDM.readTempData("themes")[WDM.readClientData("current_theme")]
+    
+    if theme[key]
+        return fs.combine theme.__path, theme[key]
+    else
+        theme = WDM.readTempData("themes")["Default"]
+        return fs.combine theme.__path, theme[key]
+
 export getScreenWidth = ->
     w = term.getSize!
     return w

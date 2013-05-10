@@ -2,4 +2,5 @@
 <properties version="1.0">
 	<comment>Default Theme File</comment>
 	
+	<entry key="splashscreen.image">splashscreen.nfp</entry>
 </properties>

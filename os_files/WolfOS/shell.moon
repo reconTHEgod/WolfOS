@@ -175,7 +175,7 @@ ok, err = pcall ->
     -- Load Theme files from ROM
     searchPath = fs.combine("rom", os.getSystemDir("themes")).."/"
     for i, path in ipairs fs.list searchPath
-        if not fs.isDir(path) and string.find(path, ".xml")
+        if fs.isDir searchPath..path
             name, theme = os.getThemeFromFile searchPath..path
             themes[name] = theme
             logAndDisplay "Theme loaded: "..name
@@ -183,7 +183,7 @@ ok, err = pcall ->
     -- Load Theme files from HDD
     searchPath = os.getSystemDir "themes"
     for i, path in ipairs fs.list searchPath
-        if not fs.isDir(path) and string.find(path, ".xml")
+        if fs.isDir searchPath..path
             name, theme = os.getThemeFromFile searchPath..path
             themes[name] = theme
             logAndDisplay "Theme loaded: "..name

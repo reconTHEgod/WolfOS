@@ -6,7 +6,7 @@ label = WUI.newLabel!
 
 image\setVisible true
 image\setPosition 1, 1 
-image\setImage "rom/"..os.getSystemDir("client").."logo.nfp"
+image\setImage WUI.getFileInTheme "splashscreen.image"
 
 text = "WolfOS "..os.getVersion!.." - wolfos.co.uk"
 w = term.getSize!

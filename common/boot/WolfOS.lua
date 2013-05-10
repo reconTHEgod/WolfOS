@@ -765,14 +765,16 @@ do
 	end
 	
 	function os.getThemeFromFile(path)
-		name = path:gmatch("([%w%s]+)%.xml")()
+		name = path:gmatch("([%w%s]+)$")()
         theme = {}
-        file = WDM.readAll(path)
-        
+        file = WDM.readAll(fs.combine(path, name..".xml"))
+		
         for k, v in file:gmatch("<entry key=\"(.-)\">(.-)</entry>") do
             theme[k] = v
 		end
         
+		theme["__path"] = path
+		
 		return name, theme
 	end
 	
