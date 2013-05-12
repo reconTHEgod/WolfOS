@@ -13,12 +13,12 @@ w = term.getSize!
 
 label\setVisible true
 label\setPosition w/2 - #text/2 + 1, 17
-label\setColour "text", "lightGrey"
-label\setColour "background", "grey"
+label\setColor "text", "lightGray"
+label\setColor "background", "gray"
 label\setText {text}
 
 frame\setVisible true
-frame\setColour "background", "grey"
+frame\setColor "background", "gray"
 frame\add image
 frame\add label
 frame\draw!

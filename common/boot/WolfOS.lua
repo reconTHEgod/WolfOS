@@ -752,16 +752,16 @@ do
 	end
 	
 	local WDM = require(os.getSystemDir("apis").."WDM")
-	function os.getLocalisationFromFile(path)
+	function os.getLocalizationFromFile(path)
         locale = path:gmatch("(%l+_%u+)%.xml")()
-        localisation = {}
+        localization = {}
         file = WDM.readAll(path)
         
         for k, v in file:gmatch("<entry key=\"(.-)\">(.-)</entry>") do
-            localisation[k] = v
+            localization[k] = v
 		end
         
-		return locale, localisation
+		return locale, localization
 	end
 	
 	function os.getThemeFromFile(path)

@@ -2,8 +2,8 @@
 
 WDM = os.getApi "WDM"
 
-export getLocalisedString = (key) ->
-    s = WDM.readTempData("localisation")[WDM.readClientData("current_locale")][key]
+export getLocalizedString = (key) ->
+    s = WDM.readTempData("localization")[WDM.readClientData("current_locale")][key]
     
     if s and s != ""
         return s
@@ -35,55 +35,55 @@ export getScreenHeight = ->
 
 -----------------------------------------
 
-colours = require "rom.apis.colours"
+colors = require "rom.apis.colors"
 paintutils = require "rom.apis.paintutils"
 
 env = getfenv paintutils.loadImage
 env.io = require "rom.apis.io"
 setfenv paintutils.loadImage, env
 
-checkColour = (c) ->
+checkColor = (c) ->
     if type(c) != "number"
-        c = colours[c]
+        c = colors[c]
     if c
         return c
     return 0
 
 fill = (x1 = 0, x2 = 0, y1 = 0, y2 = 0, c) ->
-    c = checkColour c
+    c = checkColor c
     for x = x1, x2
         for y = y1, y2
             if c > 0
                 paintutils.drawPixel x, y, c
 
-setBackgroundColour = (c) ->
-    c = checkColour c
-    term.setBackgroundColour c
+setBackgroundColor = (c) ->
+    c = checkColor c
+    term.setBackgroundColor c
 
-setTextColour = (c) ->
-    c = checkColour c
-    term.setTextColour c
+setTextColor = (c) ->
+    c = checkColor c
+    term.setTextColor c
 
 write = (t = "", x = 1, y = 1, ct, cb) ->
     term.setCursorPos x, y
-    if ct then setTextColour ct
-    if cb then setBackgroundColour cb
+    if ct then setTextColor ct
+    if cb then setBackgroundColor cb
     term.write t
 
 clear = (c) ->
     if c
-        setBackgroundColour c
+        setBackgroundColor c
     else
-        setBackgroundColour "black"
+        setBackgroundColor "black"
     term.clear!
     term.setCursorPos 1, 1
 
 -- Parent Class
 
 class Object
-    setColour: (k, v) =>
-        c = checkColour v
-        @data.colour[k] = c
+    setColor: (k, v) =>
+        c = checkColor v
+        @data.color[k] = c
     
     setEnabled: (b) =>
         ok, err = ftype "boolean", b
@@ -144,7 +144,7 @@ class Button extends Object
         @data =
             type: "Object.BUTTON"
             text: {}
-            colour: {}
+            color: {}
             width: 0
             height: 0
             xPos: 0
@@ -175,7 +175,7 @@ class Label extends Object
         @data =
             type: "Object.LABEL"
             text: {}
-            colour: {}
+            color: {}
             width: 0
             height: 0
             xPos: 0
@@ -239,7 +239,7 @@ class Frame extends Object
     new: =>
         @data =
             type: "Object.FRAME"
-            colour: {}
+            color: {}
             width: getScreenWidth!
             height: getScreenHeight!
             xPos: 1
@@ -329,8 +329,8 @@ class Frame extends Object
         if @data.isVisible
             fXPos, fYPos, fWidth, fHeight = @data.xPos, @data.yPos, @data.width, @data.height
             
-            if @data.colour.background and @data.colour.background > 0
-                fill fXPos, fXPos + fWidth - 1, fYPos, fYPos + fHeight - 1, @data.colour.background
+            if @data.color.background and @data.color.background > 0
+                fill fXPos, fXPos + fWidth - 1, fYPos, fYPos + fHeight - 1, @data.color.background
             
             for _, v in ipairs @data.objects
                 if v.data.isVisible
@@ -350,14 +350,14 @@ class Frame extends Object
                         if width > 0 and height > 0
                             x1, y1 = v.data.xPos + fXPos - 1, v.data.yPos + fYPos - 1
                             
-                            if v.data.colour.background and v.data.colour.background > 0
-                                fill x1, x1 + width - 1, y1, y1 + height - 1, v.data.colour.background
+                            if v.data.color.background and v.data.color.background > 0
+                                fill x1, x1 + width - 1, y1, y1 + height - 1, v.data.color.background
                             
                             if v.data.text
                                 for k, t in ipairs v.data.text
                                     if k <= height
-                                        if v.data.colour.text and v.data.colour.text > 0
-                                            write t\sub(1, width), x1, y1 + k - 1, v.data.colour.text
+                                        if v.data.color.text and v.data.color.text > 0
+                                            write t\sub(1, width), x1, y1 + k - 1, v.data.color.text
                                         else
                                             write t\sub(1, width), x1, y1 + k - 1
                                     else

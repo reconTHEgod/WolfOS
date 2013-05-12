@@ -36,31 +36,31 @@ ok, err = pcall ->
     if not WDM.exists os.getSystemDir("data").."users.dat"
         WDM.write os.getSystemDir("data").."users.dat", crypt.toBase64 textutils.serialize {}
     
-    logAndDisplay "Loading Language Localisation"
+    logAndDisplay "Loading Language Localization"
     currentLocale = WDM.readClientData "current_locale"
     if not currentLocale
-        currentLocale = "en_UK"
+        currentLocale = "en_US"
         WDM.writeClientData currentLocale, "current_locale"
     
-    localisation = {}
+    localization = {}
     
     -- Load Locale files from HDD
     searchPath = os.getSystemDir "lang"
     for i, path in ipairs fs.list searchPath
         if not fs.isDir(path) and string.find(path, ".xml")
-            name, locale = os.getLocalisationFromFile searchPath..path
-            localisation[name] = locale
+            name, locale = os.getLocalizationFromFile searchPath..path
+            localization[name] = locale
             logAndDisplay "Locale loaded: "..name
     
     -- Load Locale files from ROM
     searchPath = fs.combine("rom", searchPath).."/"
     for i, path in ipairs fs.list searchPath
         if not fs.isDir(path) and string.find(path, ".xml")
-            name, locale = os.getLocalisationFromFile searchPath..path
-            localisation[name] = locale
+            name, locale = os.getLocalizationFromFile searchPath..path
+            localization[name] = locale
             logAndDisplay "Locale loaded: "..name
     
-    WDM.writeTempData localisation, "localisation"
+    WDM.writeTempData localization, "localization"
     
     modemPort = WDM.readServerData("modem_port") or ""
     if not peripheral.getType(modemPort) == "modem"
@@ -192,10 +192,10 @@ ok, err = pcall ->
     
     logAndDisplay "Loading User Interface"
     if WUI.getScreenWidth! < 51 or WUI.getScreenHeight! < 19
-        log WUI.getLocalisedString("error.shell.screen_dims"), "severe"
+        logAndDisplay WUI.getLocalizedString("error.shell.screen_dims"), "severe"
         error ""
-    if not term.isColour!
-        log WUI.getLocalisedString("error.shell.screen_colour"), "severe"
+    if not term.isColor!
+        logAndDisplay WUI.getLocalizedString("error.shell.screen_color"), "severe"
         error ""
     
     _SYSTEM_THREAD = ->
@@ -217,8 +217,8 @@ ok, err = pcall ->
         error ""
 
 -- Display error if OS errored
-term.setBackgroundColour 32768 -- Black
-term.setTextColour 1 -- White
+term.setBackgroundColor 32768 -- Black
+term.setTextColor 1 -- White
 clear!
 if not ok
     log err, "severe"
@@ -235,13 +235,13 @@ if not ok
         print "The error log has been dumped to: "..dumpLocation.."\n"
 
 -- Command line colours
-backgroundColour = 32768 -- Black
+backgroundColor = 32768 -- Black
 userText = 1 -- White
-promptText = if term.isColour! then 32 else 1 -- Lime else White
-text = if term.isColour! then 16 else 1 -- Yellow else White
+promptText = if term.isColor! then 32 else 1 -- Lime else White
+text = if term.isColor! then 16 else 1 -- Yellow else White
 
 -- Drop to command line
-term.setTextColour text
+term.setTextColor text
 print "Dropping to WolfOS command line.\nType 'help' to view a list of available commands.\n"
 
 running = true
@@ -318,9 +318,9 @@ commands = {
             print "Call exit() to exit.\n"
             
             while luaRunning
-                term.setTextColour promptText
+                term.setTextColor promptText
                 write "lua> "
-                term.setTextColour userText
+                term.setTextColor userText
                 
                 s = ""
                 if script
@@ -331,7 +331,7 @@ commands = {
                     s = read nil, commandHistory
                 
                 table.insert commandHistory, s
-                term.setTextColour text
+                term.setTextColor text
                 
                 forcePrint = 0
                 func, e = loadstring s, "lua"
@@ -350,8 +350,8 @@ commands = {
                     results = {pcall -> return func!}
                     if results[1]
                         n = 1
-                        term.setTextColour text
-                        term.setBackgroundColour backgroundColour
+                        term.setTextColor text
+                        term.setBackgroundColor backgroundColor
                         if term.getCursorPos! > 1
                             print!
                         while (results[n + 1] != nil) or (n <= forcePrint)
@@ -760,20 +760,20 @@ parseLine = (_line) ->
     return run unpack words
 
 while running
-    term.setBackgroundColour backgroundColour
-    term.setTextColour promptText
+    term.setBackgroundColor backgroundColor
+    term.setTextColor promptText
     if term.getCursorPos! > 1
         print!
     
     if currentPath
         write currentPath
     write "> "
-    term.setTextColour userText
+    term.setTextColor userText
         
     s = read nil, commandHistory
     table.insert commandHistory, s
         
-    term.setTextColour text
+    term.setTextColor text
     parseLine s
 
 os.shutdown! -- Just in case.
