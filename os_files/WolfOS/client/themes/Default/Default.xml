@@ -2,5 +2,7 @@
 <properties version="1.0">
 	<comment>Default Theme File</comment>
 	
+	<entry key="splashscreen.background">gray</entry>
 	<entry key="splashscreen.image">splashscreen.nfp</entry>
+	<entry key="splashscreen.text">lightGray</entry>
 </properties>

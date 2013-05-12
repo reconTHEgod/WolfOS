@@ -13,12 +13,12 @@ w = term.getSize!
 
 label\setVisible true
 label\setPosition w/2 - #text/2 + 1, 17
-label\setColor "text", "lightGray"
-label\setColor "background", "gray"
+label\setColor "text", WUI.getValueInTheme "splashscreen.text"
+label\setColor "background", WUI.getValueInTheme "splashscreen.background"
 label\setText {text}
 
 frame\setVisible true
-frame\setColor "background", "gray"
+frame\setColor "background", WUI.getValueInTheme "splashscreen.background"
 frame\add image
 frame\add label
 frame\draw!
