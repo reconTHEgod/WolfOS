@@ -5,7 +5,9 @@ Credit goes to 'immibis' for the compression/decompression code, and to 'oeed' f
 Modified and unified into one smooth working system by 'toxicwolf'.
 ]]--
 
-local sPackage = "local pkg = %@1 local function decompress(inText) local inPos = 1 local huffmanCompression = true if huffmanCompression then local inBits = {} for k = 1, #inText do local byte = inText:sub(k, k):byte() - 32 for i = 0, 5 do local testBit = 2 ^ i inBits[#inBits + 1] = (byte % (2 * testBit)) >= testBit end end local padbit = inBits[#inBits] while inBits[#inBits] == padbit do inBits[#inBits] = nil end local pos = 1 local function readBit() if pos > #inBits then error(\"end of stream\", 2) end pos = pos + 1 return inBits[pos - 1] end local function readTree() if readBit() then local byte = 0 for i = 0, 7 do if readBit() then byte = byte + 2 ^ i end end return string.char(byte) else local subtree_0 = readTree() local subtree_1 = readTree() return {[false]=subtree_0, [true]=subtree_1} end end local tree = readTree() inText = \"\" local treePos = tree while pos <= #inBits do local bit = readBit() treePos = treePos[bit] if type(treePos) ~= \"table\" then inText = inText..treePos treePos = tree end end if treePos ~= tree then error(\"unexpected end of stream\") end end local function readTo(delim) local start = inPos local nextCaret = inText:find(delim, inPos, true) if not nextCaret then inPos = #inText + 1 return inText:sub(start) end inPos = nextCaret + 1 return inText:sub(start, nextCaret - 1) end local function splitString(str, delim) local pos = 1 return function() if pos > #str then return end local start = pos local nextDelim = str:find(delim, pos, true) if not nextDelim then pos = #str + 1 return str:sub(start) end pos = nextDelim + 1 return str:sub(start, nextDelim - 1) end end local nameTable = {} local idents = \"abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_\" local nextCompressed do local validchars = idents:gsub(\"_\",\"\") local function encode(n) local s = \"\" while n > 0 do local digit = (n % #validchars) + 1 s = s..validchars:sub(digit, digit) n = math.floor(n / #validchars) end return s end local next = 0 function nextCompressed() next = next + 1 return encode(next) end end for k = 1, tonumber(readTo(\"^\")) do local key = nextCompressed() local value = readTo(\"^\") nameTable[key] = value end local out = \"\" local function onFinishSegment(isIdent, segment) if isIdent then if segment:sub(1, 1) == \"_\" then out = out..segment:sub(2) else out = out..tostring(nameTable[segment]) end else out = out..segment end end local parsed = {} local idents = \"abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_\" local lastIdent = nil for k = inPos, #inText do local ch = inText:sub(k, k) local isIdent = idents:find(ch, 1, true) ~= nil if isIdent ~= lastIdent then if #parsed > 0 then onFinishSegment(lastIdent, parsed[#parsed]) end parsed[#parsed+1] = \"\" end lastIdent = isIdent parsed[#parsed] = parsed[#parsed]..ch end if #parsed > 0 then onFinishSegment(isIdent, parsed[#parsed]) end local out2 = \"\" local lastIndent = \"\" for line in splitString(out, \"\\n\") do while line:sub(1,2) == \"&+\" do lastIndent = lastIndent..\"\\t\" line = line:sub(3) end while line:sub(1,2) == \"&-\" do lastIndent = lastIndent:sub(1, #lastIndent - 1) line = line:sub(3) end if line:sub(1,2) == \"&&\" then line = line:sub(2) end out2 = out2..lastIndent..line..\"\\n\" end return out2 end local function makeFile(_path, _content) local file = fs.open(_path, \"w\") _content = decompress(_content) _content = _content:gsub(\"\!@\"..\"#&\", \"%\\n\")_content = textutils.unserialize(_content) file.write(_content) file.close() end local function makeFolder(_path, _content) fs.makeDir(_path) for k,v in pairs(_content) do if type(v) == \"table\" then makeFolder(_path..\"/\"..k, v) else makeFile(_path..\"/\"..k, v) end end end local sVer = \"%@2\" local sDest = shell.resolve( \"%@3\" ) or \"/\" if sDest == \"root\" then sDest = \"/\" end local tPackage = pkg makeFolder(sDest, tPackage) print(\"WolfOS \"..sVer..\" successfully installed!\")"
+local sSource, sDest, sName, sVer = "/rom", "/", "WolfOS.pkg", "2.0.0_a1"
+
+local sPackage = "local pkg = %@1 local function decompress(inText) local inPos = 1 local huffmanCompression = true if huffmanCompression then local inBits = {} for k = 1, #inText do local byte = inText:sub(k, k):byte() - 32 for i = 0, 5 do local testBit = 2 ^ i inBits[#inBits + 1] = (byte % (2 * testBit)) >= testBit end end local padbit = inBits[#inBits] while inBits[#inBits] == padbit do inBits[#inBits] = nil end local pos = 1 local function readBit() if pos > #inBits then error(\"end of stream\", 2) end pos = pos + 1 return inBits[pos - 1] end local function readTree() if readBit() then local byte = 0 for i = 0, 7 do if readBit() then byte = byte + 2 ^ i end end return string.char(byte) else local subtree_0 = readTree() local subtree_1 = readTree() return {[false]=subtree_0, [true]=subtree_1} end end local tree = readTree() inText = \"\" local treePos = tree while pos <= #inBits do local bit = readBit() treePos = treePos[bit] if type(treePos) ~= \"table\" then inText = inText..treePos treePos = tree end end if treePos ~= tree then error(\"unexpected end of stream\") end end local function readTo(delim) local start = inPos local nextCaret = inText:find(delim, inPos, true) if not nextCaret then inPos = #inText + 1 return inText:sub(start) end inPos = nextCaret + 1 return inText:sub(start, nextCaret - 1) end local function splitString(str, delim) local pos = 1 return function() if pos > #str then return end local start = pos local nextDelim = str:find(delim, pos, true) if not nextDelim then pos = #str + 1 return str:sub(start) end pos = nextDelim + 1 return str:sub(start, nextDelim - 1) end end local nameTable = {} local idents = \"abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_\" local nextCompressed do local validchars = idents:gsub(\"_\",\"\") local function encode(n) local s = \"\" while n > 0 do local digit = (n % #validchars) + 1 s = s..validchars:sub(digit, digit) n = math.floor(n / #validchars) end return s end local next = 0 function nextCompressed() next = next + 1 return encode(next) end end for k = 1, tonumber(readTo(\"^\")) do local key = nextCompressed() local value = readTo(\"^\") nameTable[key] = value end local out = \"\" local function onFinishSegment(isIdent, segment) if isIdent then if segment:sub(1, 1) == \"_\" then out = out..segment:sub(2) else out = out..tostring(nameTable[segment]) end else out = out..segment end end local parsed = {} local idents = \"abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_\" local lastIdent = nil for k = inPos, #inText do local ch = inText:sub(k, k) local isIdent = idents:find(ch, 1, true) ~= nil if isIdent ~= lastIdent then if #parsed > 0 then onFinishSegment(lastIdent, parsed[#parsed]) end parsed[#parsed+1] = \"\" end lastIdent = isIdent parsed[#parsed] = parsed[#parsed]..ch end if #parsed > 0 then onFinishSegment(isIdent, parsed[#parsed]) end local out2 = \"\" local lastIndent = \"\" for line in splitString(out, \"\\n\") do while line:sub(1,2) == \"&+\" do lastIndent = lastIndent..\"\\t\" line = line:sub(3) end while line:sub(1,2) == \"&-\" do lastIndent = lastIndent:sub(1, #lastIndent - 1) line = line:sub(3) end if line:sub(1,2) == \"&&\" then line = line:sub(2) end out2 = out2..lastIndent..line..\"\\n\" end return out2 end local function makeFile(_path, _content) local file = fs.open(_path, \"w\") _content = decompress(_content) _content = _content:gsub(\"\!@\"..\"#&\", \"%\\n\")_content = textutils.unserialize(_content) file.write(_content) file.close() end local function makeFolder(_path, _content) fs.makeDir(_path) for k,v in pairs(_content) do if type(v) == \"table\" then makeFolder(_path..\"/\"..k, v) else makeFile(_path..\"/\"..k, v) end end end local tPackage = pkg makeFolder(\"%@2\", tPackage) fs.delete(\"%@3\") print(\"WolfOS %@4 successfully installed!\")"
 
 local function compress(inText)
 	local function countTabs(l)
@@ -313,32 +315,38 @@ local function compress(inText)
 end
 
 local function addFile(_package, _path)
-	if fs.getName(_path) == ".DS_Store" or string.find(_path, ".moon") then
+	if string.find(_path, ".moon") or string.find(_path, "CraftOS") then
 		return _package
 	end
+	
 	local file, err = fs.open(_path, "r")
+	
 	local content = file.readAll()
+	content = content:gsub("%%@VERSION", function() return sVer end)
 	content = content:gsub("%\n", "\!@".."#&")
 	content = compress(content)
 	_package[fs.getName(_path)] = content
 	file.close()
+	
 	return _package
 end
 
 local function addFolder(_package, _path)
+	if not (string.find(_path, "WolfOS") or string.find(_path, "boot") or _path == "/rom") then
+		return nil
+	end
+	
 	_package = _package or {}
 	for _,f in ipairs(fs.list(_path)) do
 		local path = _path.."/"..f
 		if fs.isDir(path) then
 			_package[fs.getName(f)] = addFolder(_package[fs.getName(f)], path)
-		else
+		elseif not fs.isDir(path) and (string.find(_path, "WolfOS") or string.find(_path, "boot")) then
 			_package =  addFile(_package, path)
 		end
 	end
 	return _package
 end
-
-local sSource, sDest, sName, sVer = "/rom/WolfOS", "/WolfOS", "WolfOS.pkg", "2.0.0_a1"
 
 if fs.exists( sSource ) and fs.isDir( sSource ) then
 	local tPackage = {}
@@ -346,8 +354,9 @@ if fs.exists( sSource ) and fs.isDir( sSource ) then
 	
 	local fPackage = fs.open(sName,"w")
 	
-	sPackage = string.gsub(sPackage, "%%@3", sDest)
-	sPackage = string.gsub(sPackage, "%%@2", sVer)
+	sPackage = string.gsub(sPackage, "%%@4", sVer)
+	sPackage = string.gsub(sPackage, "%%@3", sName)
+	sPackage = string.gsub(sPackage, "%%@2", sDest)
 	sPackage = string.gsub(sPackage, "%%@1", function() return textutils.serialize(tPackage) end)	
 	fPackage.write(sPackage)
 	fPackage.close()

@@ -1,7 +1,7 @@
 -- WolfOS BIOS
 
 -- WolfOS version
-local _WOLFOS_VERSION = "2.0.0_a1"
+local _WOLFOS_VERSION = "%@VERSION"
 
 function os.getVersion()
 	return _WOLFOS_VERSION
@@ -831,10 +831,11 @@ end
 
 -- Run the shell
 local ok, err = pcall(function()
-	if fs.exists(os.getSystemDir("root").."shell.lua") then
-		os.run({}, os.getSystemDir("root").."shell.lua")
-	elseif fs.exists("rom/"..os.getSystemDir("root").."shell.lua") then
-		os.run({}, "rom/"..os.getSystemDir("root").."shell.lua")
+	path = os.getSystemDir("root").."shell.lua"
+	if fs.exists(path) then
+		os.run({}, path)
+	elseif fs.exists("rom/"..path) then
+		os.run({}, "rom/"..path)
 	else
 		error("No shell.lua file found!")
 	end
