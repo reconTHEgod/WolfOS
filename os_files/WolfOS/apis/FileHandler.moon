@@ -1,20 +1,20 @@
 -- WolfOS File Handler
 
-WDM = os.getApi "WDM"
-WNC = os.getApi "WNC"
+Data = os.getApi "Data"
+Network = os.getApi "Network"
 
-getSide = -> return WDM.readTempData "current_side"
-getModemPort = -> return WDM.readServerData "modem_port"
-getRelayAddress = -> return WDM.readTempData "parent_address"
-getServerState = -> return WDM.readServerData "server_state"
+getSide = -> return Data.readTempData "current_side"
+getModemPort = -> return Data.readServerData "modem_port"
+getRelayAddress = -> return Data.readTempData "parent_address"
+getServerState = -> return Data.readServerData "server_state"
 getServerModuleChannel = ->
-    modules = WDM.readTempData("server_modules") or {}
+    modules = Data.readTempData("server_modules") or {}
     if modules.file
         return modules.file.channel
 
 getServerAddress = ->
     channel = getServerModuleChannel!
-    address =  WDM.readServerData "server_address"
+    address =  Data.readServerData "server_address"
     
     if address and channel
         return string.match(address, "(%d+):(%d+)")..":"..channel
@@ -31,8 +31,8 @@ export isDir = (absPath) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"is_dir", absPath}
-            data = WNC.listen getModemPort!, getServerModuleChannel!, 5
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"is_dir", absPath}
+            data = Network.listen getModemPort!, getServerModuleChannel!, 5
             
             if data and data[1] == "is_dir_response"
                 return data[2]
@@ -48,8 +48,8 @@ export list = (absPath, sort) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"list_contents", absPath, sort}
-            data = WNC.listen getModemPort!, getServerModuleChannel!, 5
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"list_contents", absPath, sort}
+            data = Network.listen getModemPort!, getServerModuleChannel!, 5
             
             if data and data[1] == "list_contents_response"
                 return data[2]
@@ -77,7 +77,7 @@ export move = (absPath, destPath) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"move_item", absPath, destPath}
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"move_item", absPath, destPath}
         when "Side.SERVER"
             fs.move absPath, destPath
 
@@ -88,7 +88,7 @@ export copy = (absPath, destPath) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"copy_item", absPath, destPath}
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"copy_item", absPath, destPath}
         when "Side.SERVER"
             fs.copy absPath, destPath
 
@@ -99,6 +99,6 @@ export delete = (absPath) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"delete_item", absPath}
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"delete_item", absPath}
         when "Side.SERVER"
             fs.delete absPath

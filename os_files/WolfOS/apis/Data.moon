@@ -77,18 +77,18 @@ export removeLine = (path, line) ->
 
 -- Data handler package
 
-textutils = require "rom.apis.textutils"
-crypt = require os.getSystemDir("apis").."crypt..lua"
+TextUtils = require "rom.apis.TextUtils"
+Crypt = os.getApi "Crypt"
 
 dataTemp = {}
 dataClient = nil
 dataServer = nil
 
 export readData = (path) ->
-    return textutils.unserialize crypt.fromBase64 readAll path
+    return TextUtils.unserialize Crypt.fromBase64 readAll path
 
 export writeData = (path, table) ->
-    write path, crypt.toBase64 textutils.serialize table
+    write path, Crypt.toBase64 TextUtils.serialize table
 
 export readTempData = (k) ->
     if k

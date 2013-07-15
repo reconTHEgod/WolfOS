@@ -1,20 +1,20 @@
 -- WolfOS Account Utilities
 
-WDM = os.getApi "WDM"
-WNC = os.getApi "WNC"
+Data = os.getApi "Data"
+Network = os.getApi "Network"
 
-getSide = -> return WDM.readTempData "current_side"
-getModemPort = -> return WDM.readServerData "modem_port"
-getRelayAddress = -> return WDM.readTempData "parent_address"
-getServerState = -> return WDM.readServerData "server_state"
+getSide = -> return Data.readTempData "current_side"
+getModemPort = -> return Data.readServerData "modem_port"
+getRelayAddress = -> return Data.readTempData "parent_address"
+getServerState = -> return Data.readServerData "server_state"
 getServerModuleChannel = ->
-    modules = WDM.readTempData("server_modules") or {}
+    modules = Data.readTempData("server_modules") or {}
     if modules.user
         return modules.user.channel
 
 getServerAddress = ->
     channel = getServerModuleChannel!
-    address =  WDM.readServerData "server_address"
+    address =  Data.readServerData "server_address"
     
     if address and channel
         return string.match(address, "(%d+):(%d+)")..":"..channel
@@ -42,13 +42,13 @@ generateUID = ->
 export getUsers = ->
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_request", "user_list"}
-            data = WNC.listen getModemPort!, getServerModuleChannel!, 5
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_request", "user_list"}
+            data = Network.listen getModemPort!, getServerModuleChannel!, 5
             
             if data and data[1] == "request_success"
                 users = data[2]
         when "Side.SERVER"
-            users = WDM.readData os.getSystemDir("data").."users.dat" 
+            users = Data.readData os.getSystemDir("data").."users.dat" 
     
     return users
 
@@ -71,11 +71,11 @@ export createUser = (name, hash, type = "user") ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "new_user", name, hash, type}
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "new_user", name, hash, type}
         when "Side.SERVER"
             uid = generateUID!
             table.insert users, {uid: uid, name: name, hash: hash, type: type}
-            WDM.writeData os.getSystemDir("data").."users.dat", users
+            Data.writeData os.getSystemDir("data").."users.dat", users
             fs.makeDir os.getSystemDir("users")..uid.."/"
 
 export removeUser = (_user) ->
@@ -85,12 +85,12 @@ export removeUser = (_user) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "remove_user", _user}
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "remove_user", _user}
         when "Side.SERVER"
             user, i = exists _user
             if user
                 table.remove users, i
-                WDM.writeData os.getSystemDir("data").."users.dat", users
+                Data.writeData os.getSystemDir("data").."users.dat", users
                 dir = os.getSystemDir("users")..user.uid.."/"
                 if fs.exists dir
                     fs.delete dir
@@ -102,30 +102,30 @@ export changeUserData = (_user, k, v) ->
     
     switch getSide!
         when "Side.CLIENT"
-            WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "update_user", _user, k, v}
+            Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"data_update", "update_user", _user, k, v}
         when "Side.SERVER"
             user, i = exists _user
             if user
                 if k != "uid"
                     user[k] = v
                     users[i] = user
-                    WDM.writeData os.getSystemDir("data").."users.dat", users
+                    Data.writeData os.getSystemDir("data").."users.dat", users
 
 export checkLogin = (name, hash) ->
     if ftype "string, string", name, hash
         switch getSide!
             when "Side.CLIENT"
-                WNC.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"login_attempt", name, hash}
-                data = WNC.listen getModemPort!, getServerModuleChannel!, 5
+                Network.send getModemPort!, getRelayAddress!, thisAddress!, getServerAddress!, {"login_attempt", name, hash}
+                data = Network.listen getModemPort!, getServerModuleChannel!, 5
                 
                 if data and data[1] == "login_success"
-                    WDM.writeTempData false, "local_user"
+                    Data.writeTempData false, "local_user"
                     return true, data[2]
             when "Side.SERVER"
                 user = exists(name) or {}
                 
                 if name == user.name and hash == user.hash
-                    WDM.writeTempData true, "local_user"
+                    Data.writeTempData true, "local_user"
                     return true, user
     
     return false, "Invalid username or password!"
