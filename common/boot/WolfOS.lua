@@ -327,9 +327,9 @@ do
 	end
 end
 
--- Install debug API
+-- Install Debug API
 do
-	debug = {}
+	Debug = {}
 	
 	local term = require("rom.apis.term")
 	local keys = require("rom.apis.keys")
@@ -346,7 +346,7 @@ do
 		term.clear()
 		term.setCursorPos(x, y)
 	end
-	debug.clear = clear
+	Debug.clear = clear
 	
 	local function write(text)
 		local w, h = term.getSize()
@@ -405,7 +405,7 @@ do
 		
 		return linesPrinted
 	end
-	debug.write = write
+	Debug.write = write
 	
 	local function print(...)
 		local linesPrinted = 0
@@ -416,7 +416,7 @@ do
 		linesPrinted = linesPrinted + write("\n")
 		return linesPrinted
 	end
-	debug.print = print
+	Debug.print = print
 	
 	local function printError(...)
 		if term.isColour() then
@@ -426,7 +426,7 @@ do
 		print(...)
 		term.setTextColour(1) -- White
 	end
-	debug.printError = printError
+	Debug.printError = printError
 	
 	local function printToMonitor(side, text)
 		if peripheral.getType(side) == "monitor" then
@@ -444,7 +444,7 @@ do
 			end
 		end
 	end
-	debug.printToMonitor = printToMonitor
+	Debug.printToMonitor = printToMonitor
 	
 	local function read(_replaceChar, _history)
 		term.setCursorBlink(true)
@@ -550,7 +550,7 @@ do
 		print()
 		return line
 	end
-	debug.read = read
+	Debug.read = read
 end
 
 -- Install log API
@@ -751,11 +751,11 @@ do
 		return require(path.."apis."..api)
 	end
 	
-	local WDM = require(os.getSystemDir("apis").."WDM")
+	local Data = os.getApi("Data")
 	function os.getLocalizationFromFile(path)
         locale = path:gmatch("(%l+_%u+)%.xml")()
         localization = {}
-        file = WDM.readAll(path)
+        file = Data.readAll(path)
         
         for k, v in file:gmatch("<entry key=\"(.-)\">(.-)</entry>") do
             localization[k] = v
@@ -767,7 +767,7 @@ do
 	function os.getThemeFromFile(path)
 		name = path:gmatch("([%w%s]+)$")()
         theme = {}
-        file = WDM.readAll(fs.combine(path, name..".xml"))
+        file = Data.readAll(fs.combine(path, name..".xml"))
 		
         for k, v in file:gmatch("<entry key=\"(.-)\">(.-)</entry>") do
             theme[k] = v
@@ -780,7 +780,7 @@ do
 	
 	function os.getModuleFromFile(path)
         name = path:gmatch("(%a+)%.lua")()
-		_modules = WDM.readServerData("server_modules")
+		_modules = Data.readServerData("server_modules")
         
         if _modules and type(_modules[name]) == "number" then
             module = {["channel"] = _modules[name], ["thread"] = function() os.run({}, path) end}
@@ -843,12 +843,12 @@ end)
 
 -- If the shell errored, let the user read it.
 if not ok then
-	debug.printError(err)
+	Debug.printError(err)
 end
 
 pcall(function()
 	term.setCursorBlink(false)
-	debug.print("Press any key to continue")
+	Debug.print("Press any key to continue")
 	os.pullEvent("key") 
 end)
 os.shutdown()

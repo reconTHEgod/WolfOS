@@ -1,12 +1,12 @@
 -- HyperPaw Network Relay Shell
 
-term = require "rom.apis.term"
-textutils = require "rom.apis.textutils"
-peripheral = require "rom.apis.peripheral"
-crypt = require os.getSystemDir("apis").."crypt..lua"
-WNC = require os.getSystemDir("apis").."WNC..lua"
+Term = require "rom.apis.term"
+TextUtils = require "rom.apis.textutils"
+Peripheral = require "rom.apis.peripheral"
+Crypt = os.getApi "Crypt"
+Network = os.getApi "Network"
 
-import clear, print, printError, read, write from debug
+import clear, print, printError, read, write from Debug
 
 if not os.getComputerLabel!
     os.setComputerLabel "ID #"..os.getComputerID!
@@ -26,11 +26,11 @@ data_ = {}
 data_.file_path = os.getSystemDir("data").."network.dat"
 data_.write = ->
     file = fs.open data_.file_path, "w"
-    file.write crypt.toBase64 textutils.serialize systemData
+    file.write Crypt.toBase64 TextUtils.serialize systemData
     file.close!
 data_.read = ->
     file = fs.open data_.file_path, "r"
-    systemData = textutils.unserialize crypt.fromBase64 file.readAll!
+    systemData = TextUtils.unserialize Crypt.fromBase64 file.readAll!
     file.close!
 
 -- Network Map functions
@@ -57,9 +57,9 @@ map.distribute = ->
     for n1, link in pairs links
         for n2 in pairs link
             if n1 == computerID
-                WNC.send systemData.modem_port, n2, n1, n2, {"HYPERPAW_network_map_update", network_map}
+                Network.send systemData.modem_port, n2, n1, n2, {"HYPERPAW_network_map_update", network_map}
             elseif n2 == computerID
-                WNC.send systemData.modem_port, n1, n2, n1, {"HYPERPAW_network_map_update", network_map}
+                Network.send systemData.modem_port, n1, n2, n1, {"HYPERPAW_network_map_update", network_map}
 map.process_update = (network_map) ->
     _update = false
     
@@ -127,13 +127,13 @@ _INIT_THREAD = ->
     
     data_.read!
     modemPort = systemData.modem_port or ""
-    if not peripheral.getType(modemPort) == "modem"
+    if not Peripheral.getType(modemPort) == "modem"
         systemData.connected = false
         data_.write!
 
 _LISTENER_THREAD = ->
     while true
-        data = WNC.listen modemPort, channel
+        data = Network.listen modemPort, channel
         table.insert messageQueue, data
 
 _COMMUNICATION_THREAD = ->
@@ -148,9 +148,9 @@ _COMMUNICATION_THREAD = ->
         os.addProcess "LISTENER_THREAD", _LISTENER_THREAD
         
         map.add_relay computerID
-        modem = peripheral.wrap modemPort
+        modem = Peripheral.wrap modemPort
         modem.open channel
-        WNC.broadcast modemPort, channel, {"HYPERPAW_relay_discovery"}
+        Network.broadcast modemPort, channel, {"HYPERPAW_relay_discovery"}
         
         thisAddress = computerID..":"..channel
         while true
@@ -173,14 +173,14 @@ _COMMUNICATION_THREAD = ->
                 
                 if data.destinationAddress == nil
                     if data[1] == "HYPERPAW_parent_request"
-                        WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_parent_proposal"}
+                        Network.send modemPort, sender, thisAddress, sender, {"HYPERPAW_parent_proposal"}
                     elseif data[1] == "HYPERPAW_relay_discovery"
                         if relays[senderID] == nil
                             map.add_relay senderID
                         
                         update = map.add_link computerID, senderID
                         if not update
-                            WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_network_map_update", map.get!}
+                            Network.send modemPort, sender, thisAddress, sender, {"HYPERPAW_network_map_update", map.get!}
                 elseif data.destinationAddress == thisAddress
                     if data[1] == "HYPERPAW_network_map_update"
                         update = map.process_update data[2]
@@ -189,12 +189,12 @@ _COMMUNICATION_THREAD = ->
                             parents[senderID] = computerID
                             update = true
                     elseif data[1] == "HYPERPAW_network_map_request"
-                        WNC.send modemPort, sender, thisAddress, data.sourceAddress, {"HYPERPAW_network_map_update", map.get!}
+                        Network.send modemPort, sender, thisAddress, data.sourceAddress, {"HYPERPAW_network_map_update", map.get!}
                 else
                     sendTo = nil
                     if parents[senderID] != nil
                         if sender != data.sourceAddress
-                            WNC.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "impersonation_attempt"}
+                            Network.send modemPort, sender, thisAddress, sender, {"HYPERPAW_relay_error", "impersonation_attempt"}
                     
                     if parents[destID] != nil and parents[sourceID] != nil
                         if parents[destID] == computerID
@@ -209,9 +209,9 @@ _COMMUNICATION_THREAD = ->
                         for k, v in ipairs data
                             table.insert packets, v
                         
-                        WNC.send modemPort, sendTo, data.sourceAddress, dest, packets
+                        Network.send modemPort, sendTo, data.sourceAddress, dest, packets
                     else
-                        WNC.send modemPort, sender, thisAddress, source, {"HYPERPAW_relay_error", "unknown_child"}
+                        Network.send modemPort, sender, thisAddress, source, {"HYPERPAW_relay_error", "unknown_child"}
                 
                 if update
                     map.calculate!
@@ -238,13 +238,13 @@ _SYSTEM_THREAD = ->
         
         for k, v in ipairs data
             print v
-            x, y = term.getCursorPos!
-            w, h = term.getSize!
+            x, y = Term.getCursorPos!
+            w, h = Term.getSize!
             if y == h
-                term.write "Press any key to continue..."
+                Term.write "Press any key to continue..."
                 os.pullEvent "key"
-                term.clearLine!
-                term.setCursorPos 1, y
+                Term.clearLine!
+                Term.setCursorPos 1, y
     
     -- Table of commands
     commands = {
@@ -266,7 +266,7 @@ _SYSTEM_THREAD = ->
             if not systemData.connected
                 cont = false
                 if modemPort == "top" or modemPort == "bottom" or modemPort == "front" or modemPort == "back" or modemPort == "left" or modemPort == "right"
-                    if peripheral.getType(modemPort) == "modem"
+                    if Peripheral.getType(modemPort) == "modem"
                         systemData.modem_port = modemPort
                         data_.write!
                         cont = true
@@ -290,7 +290,7 @@ _SYSTEM_THREAD = ->
                 printError "Already hosting network relay point!"
         close: ->
             if systemData.connected
-                modem = peripheral.wrap systemData.modem_port
+                modem = Peripheral.wrap systemData.modem_port
                 modem.closeAll!
                 os.removeProcess "COMMUNICATION_THREAD"
                 print "Disconnected from network."
@@ -348,7 +348,7 @@ _SYSTEM_THREAD = ->
         return run unpack words
     
     while running
-        if term.getCursorPos! > 1
+        if Term.getCursorPos! > 1
             print!
         write "> "
         
