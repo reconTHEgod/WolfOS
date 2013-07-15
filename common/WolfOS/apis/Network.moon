@@ -1,8 +1,8 @@
 -- WolfOS Network Communication (HyperPaw)
 
-peripheral = require "rom.apis.peripheral"
-textutils = require "rom.apis.textutils"
-crypt = require os.getSystemDir("apis").."crypt..lua"
+Peripheral = require "rom.apis.peripheral"
+TextUtils = require "rom.apis.textutils"
+Crypt = os.getApi "Crypt"
 
 _VALID_PORTS = {top: true, bottom: true, front: true, back: true, left: true, right: true}
 
@@ -15,8 +15,8 @@ parseAddress = (address) ->
 
 export checkModemPort = (modemPort) ->
     if _VALID_PORTS[modemPort]
-        if peripheral.getType(modemPort) == "modem"
-            return true, peripheral.wrap modemPort
+        if Peripheral.getType(modemPort) == "modem"
+            return true, Peripheral.wrap modemPort
         else
             return false, "Invalid modem port"
     else
@@ -55,7 +55,7 @@ export send = (modemPort, receiverAddress, sourceAddress, destinationAddress, pa
     if not modem.isOpen channel
         modem.open channel
     
-    modem.transmit channel, channel, crypt.toBase64 textutils.serialize data
+    modem.transmit channel, channel, Crypt.toBase64 TextUtils.serialize data
     modem.close channel
 
 export broadcast = (modemPort, channel, packets) ->
@@ -81,7 +81,7 @@ export broadcast = (modemPort, channel, packets) ->
     if not modem.isOpen channel
         modem.open channel
     
-    modem.transmit channel, channel, crypt.toBase64 textutils.serialize data
+    modem.transmit channel, channel, Crypt.toBase64 TextUtils.serialize data
     modem.close channel
     
 export listen = (modemPort, channel, timeout) ->
@@ -105,7 +105,7 @@ export listen = (modemPort, channel, timeout) ->
         _event, _modemPort, _channel, _replyChannel, _data, _distance = os.pullEvent!
         
         if _event == "modem_message"
-            data = textutils.unserialize crypt.fromBase64 _data
+            data = TextUtils.unserialize Crypt.fromBase64 _data
             data.distance = _distance
             
             if data.receiverAddress == nil or data.receiverAddress == os.getComputerID!..":"..channel
