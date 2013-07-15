@@ -1,7 +1,7 @@
 os_files/WolfOS/data/*
 *.lua
 !common/boot/WolfOS.lua
-!common/WolfOS/apis/crypt.lua
-!common/WolfOS/apis/hash.lua
-!common/WolfOS/apis/bit32.lua
+!common/WolfOS/apis/Crypt.lua
+!common/WolfOS/apis/Hash.lua
+!common/WolfOS/apis/Bit32.lua
 !other/*
